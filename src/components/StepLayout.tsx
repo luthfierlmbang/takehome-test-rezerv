@@ -51,11 +51,11 @@ export function StepLayout({
   }, [stepIndex])
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex h-screen overflow-hidden bg-white">
       <Navbar activeItem="Services" items={NAV_ITEMS} />
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <PageHeader title={title} description={description} />
-        <div className="flex flex-col gap-4 px-8 py-6">
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 py-6">
           <Breadcrumb items={['Services', title]} />
           <Stepper steps={STEP_LABELS} currentIndex={stepIndex} />
           <AnimatePresence mode="wait">
@@ -77,7 +77,7 @@ export function StepLayout({
             )}
           </AnimatePresence>
         </div>
-        <div className="mt-auto px-8 pb-6">
+        <div className="shrink-0 px-8 pb-6">
           <ActionButtons
             onBack={onBack}
             onNext={onNext}
