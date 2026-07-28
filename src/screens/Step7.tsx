@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { StepLayout } from '../components/StepLayout'
@@ -20,13 +20,19 @@ export default function Step7() {
   const navigate = useNavigate()
   const { data } = useBooking()
   const [status, setStatus] = useState<'idle' | 'publishing' | 'error' | 'success'>('idle')
+  // Deterministic, testable trigger for the failure path (no Math.random): typing the
+  // "fail" sentinel into the service name simulates a publish error on the first attempt
+  // only, so retrying (without touching the sentinel) demonstrates the recovery path.
+  const hasFailedRef = useRef(false)
 
   async function handlePublish() {
     setStatus('publishing')
+    const shouldFail = data.serviceName.trim().toLowerCase() === 'fail' && !hasFailedRef.current
     try {
-      await simulateAsyncLoad(600)
+      await simulateAsyncLoad(600, shouldFail)
       setStatus('success')
     } catch {
+      hasFailedRef.current = true
       setStatus('error')
     }
   }

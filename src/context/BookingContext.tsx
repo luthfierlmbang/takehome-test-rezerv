@@ -31,8 +31,15 @@ export const STEP_ROUTE = (n: number) => `/step-${n}`
 
 const BookingContext = createContext<BookingContextValue | null>(null)
 
-export function BookingProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<BookingData>(INITIAL_DATA)
+export function BookingProvider({
+  children,
+  initialData,
+}: {
+  children: ReactNode
+  /** Overrides applied on top of the default empty booking data — primarily useful for tests. */
+  initialData?: Partial<BookingData>
+}) {
+  const [data, setData] = useState<BookingData>({ ...INITIAL_DATA, ...initialData })
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
   function updateField(key: keyof BookingData, value: string) {

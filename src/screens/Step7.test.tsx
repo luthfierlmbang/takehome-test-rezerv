@@ -36,3 +36,21 @@ test('publishing shows a loading state then a success confirmation', async () =>
 
   await waitFor(() => expect(screen.getByText(/service published/i)).toBeInTheDocument())
 })
+
+test('publishing failure shows the error banner and a retry succeeds', async () => {
+  render(
+    <MemoryRouter initialEntries={['/step-7']}>
+      <BookingProvider initialData={{ serviceName: 'fail' }}>
+        <Step7 />
+      </BookingProvider>
+    </MemoryRouter>,
+  )
+
+  await waitFor(() => screen.getByRole('button', { name: 'Publish' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/publishing failed/i))
+
+  await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+  await waitFor(() => expect(screen.getByText(/service published/i)).toBeInTheDocument())
+})
