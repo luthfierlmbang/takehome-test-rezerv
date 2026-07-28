@@ -33,7 +33,7 @@ export default function Step7() {
 
   if (status === 'success') {
     return (
-      <StepLayout stepIndex={6} title="Review" description="Your service is live." onNext={() => {}} backDisabled>
+      <StepLayout stepIndex={5} title="Review" description="Your service is live." onNext={() => {}} backDisabled>
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
           <Card>
             <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -48,7 +48,7 @@ export default function Step7() {
 
   return (
     <StepLayout
-      stepIndex={6}
+      stepIndex={5}
       title="Review"
       description="Check the booking page preview on the right before publishing."
       onBack={() => navigate('/step-6')}

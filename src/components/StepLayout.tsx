@@ -8,7 +8,7 @@ import { ActionButtons } from './ActionButtons'
 import { Skeleton } from './Skeleton'
 import { simulateAsyncLoad } from '../lib/simulateAsyncLoad'
 
-const STEP_LABELS = ['Overview', 'Basic details', 'Locations', 'Durations', 'Pricing', 'Payment', 'Review']
+const STEP_LABELS = ['Overview', 'Basic details', 'Locations', 'Durations', 'Pricing', 'Review']
 const NAV_ITEMS = [
   { label: 'Services', href: '/step-1' },
   { label: 'Calendar', href: '#' },
