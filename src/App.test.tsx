@@ -8,47 +8,50 @@ test('renders the app shell', () => {
 })
 
 // Each route change now runs a page-transition exit/enter (AnimatePresence) on top of
-// StepLayout's own skeleton-loading delay, so allow more time than the default 1s and let
-// the transition settle before the next interaction (avoids racing the outgoing/incoming
-// AnimatePresence children, which briefly overlap during the handoff).
+// StepLayout's own skeleton-loading delay. `screen.getByRole('button', { name: 'Next' })`
+// is ambiguous during that handoff: the outgoing screen's footer Next button (with
+// mode="wait", the incoming screen doesn't mount until the outgoing one has fully exited,
+// but the assertion still must not depend on that timing) can resolve the query before the
+// intended screen is actually showing. Every wait below instead targets text/labels/testids
+// that only exist on the screen we're navigating *to*, so a click can never land on the
+// wrong screen's control. With scoped-enough queries, no artificial settle delay is needed;
+// waitFor's polling itself is the only synchronization required.
 const TRANSITION_TIMEOUT = 3000
-
-async function waitAndSettle<T>(query: () => T): Promise<T> {
-  const result = await waitFor(query, { timeout: TRANSITION_TIMEOUT })
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  return result
-}
 
 test(
   'walks the full booking flow from step 1 to a published confirmation',
   async () => {
     render(<App />)
 
-    await waitAndSettle(() => screen.getByRole('button', { name: 'Get started' }))
+    await waitFor(() => screen.getByRole('button', { name: 'Get started' }), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Get started' }))
 
-    await waitAndSettle(() => screen.getByLabelText('Service name'))
+    // Step 2 ("Basic details" / service name form) is the only screen with this label.
+    await waitFor(() => screen.getByLabelText('Service name'), { timeout: TRANSITION_TIMEOUT })
     await userEvent.type(screen.getByLabelText('Service name'), 'Personal Training')
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 2 -> 3
 
-    await waitAndSettle(() => screen.getByRole('button', { name: 'Next' }))
+    // Step 3 reuses Step2's field labels, so key off its unique description text instead.
+    await waitFor(() => screen.getByText('Confirm the details customers will see.'), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 3 -> 4
 
-    await waitAndSettle(() => screen.getByLabelText('Location'))
+    await waitFor(() => screen.getByLabelText('Location'), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 4 -> 5
 
-    await waitAndSettle(() => screen.getByLabelText('Duration (minutes)'))
+    await waitFor(() => screen.getByLabelText('Duration (minutes)'), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 5 -> 6
 
-    await waitAndSettle(() => screen.getByLabelText('Base price'))
+    await waitFor(() => screen.getByLabelText('Base price'), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 6 -> 7
 
-    await waitAndSettle(() => screen.getByTestId('review-details'))
+    await waitFor(() => screen.getByTestId('review-details'), { timeout: TRANSITION_TIMEOUT })
     // Confirms context data survives the full Step1 -> Step7 chain (the review row).
     expect(screen.getByText('Personal Training')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
 
-    await waitAndSettle(() => expect(screen.getByText(/service published/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/service published/i)).toBeInTheDocument(), {
+      timeout: TRANSITION_TIMEOUT,
+    })
     // Confirms the success panel also interpolates the persisted service name.
     expect(screen.getByText(/Personal Training/)).toBeInTheDocument()
   },
