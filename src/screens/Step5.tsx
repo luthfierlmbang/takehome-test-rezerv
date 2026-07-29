@@ -1,138 +1,152 @@
 import { useNavigate } from 'react-router-dom'
+import { Eye, Plus, Trash } from '@phosphor-icons/react'
 import { WizardLayout } from '../components/WizardLayout'
 import { Card } from '../components/Card'
 import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
 import { useBooking } from '../context/BookingContext'
 
-const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
-/** A long range can generate dozens of slots; cap the preview so it stays one tidy row. */
-const MAX_VISIBLE_TIMES = 12
-const INTERVALS = ['Every 15 Min', 'Every 30 Min', 'Every Hour']
-
-function parseTimeToMinutes(value: string): number | null {
-  const [h, m] = value.split(':').map(Number)
-  if (Number.isNaN(h) || Number.isNaN(m)) return null
-  return h * 60 + m
-}
-
-function formatMinutes(total: number): string {
-  const h = Math.floor(total / 60) % 24
-  const m = total % 60
-  const period = h >= 12 ? 'pm' : 'am'
-  const hour12 = h % 12 === 0 ? 12 : h % 12
-  return `${hour12}${m === 0 ? '' : `.${String(m).padStart(2, '0')}`}${period}`
-}
-
-function intervalMinutes(label: string): number {
-  if (label === 'Every 30 Min') return 30
-  if (label === 'Every Hour') return 60
-  return 15
-}
-
-function generateStartTimes(from: string, until: string, interval: string): string[] {
-  const start = parseTimeToMinutes(from)
-  const end = parseTimeToMinutes(until)
-  if (start === null || end === null || end <= start) return []
-  const step = intervalMinutes(interval)
-  const times: string[] = []
-  for (let t = start; t < end; t += step) {
-    times.push(formatMinutes(t))
-  }
-  return times
-}
+const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
 
 export default function Step5() {
   const navigate = useNavigate()
   const { data, updateField } = useBooking()
 
-  function toggleDuration(label: string, checked: boolean) {
-    updateField(
-      'selectedDurations',
-      checked ? [...data.selectedDurations, label] : data.selectedDurations.filter((d) => d !== label),
-    )
-  }
-
-  const startTimes = generateStartTimes(data.bookableFrom, data.bookableUntil, data.slotInterval)
-
   return (
-    <WizardLayout stepIndex={2} onBack={() => navigate('/step-4')} onNext={() => navigate('/step-6')}>
-      <div>
-        <h2 className="text-2xl font-medium leading-[31px] text-black">Durations &amp; booking slots</h2>
-        <p className="text-sm text-brand-textMuted">
-          Durations are what customers choose. The slot interval controls how often a new start time appears.
+    <WizardLayout stepIndex={3} onBack={() => navigate('/step-4')} onNext={() => navigate('/step-6')}>
+      <div className="flex flex-col gap-4">
+        <h2 className="text-2xl font-medium leading-[31px] text-black">Pricing</h2>
+        <p className="text-base leading-[26px] text-brand-textMuted">
+          Set one base price, then add rules for the times that should cost more or less.
         </p>
       </div>
+
       <Card>
-        <div className="flex flex-col gap-4">
-          <div>
-            <span id="duration-group-label" className="text-sm font-medium text-black">
-              Bookable durations
-            </span>
-            <div role="group" aria-labelledby="duration-group-label" className="mt-2 flex flex-wrap gap-2">
-              {DURATIONS.map((label) => (
-                <CheckboxChip
-                  key={label}
-                  label={label}
-                  checked={data.selectedDurations.includes(label)}
-                  onChange={(checked) => toggleDuration(label, checked)}
+        {/* Figma stacks this: 16px medium label, then a 75px price field with "Per Session" beside it. */}
+        <div className="flex w-[420px] flex-col gap-2">
+          <label htmlFor="base-price" className="text-base font-medium leading-[26px] text-black">
+            Base price applies to every slot unless a rule overrides it
+          </label>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-[75px] items-center gap-1 rounded-lg border border-brand-border px-3 text-sm">
+              <span className="text-brand-textMuted">$</span>
+              <input
+                id="base-price"
+                value={data.basePrice}
+                onChange={(e) => updateField('basePrice', e.target.value)}
+                className="w-full text-black outline-none"
+              />
+            </div>
+            <span className="text-xs leading-[15px] text-black">Per Session</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
+            <h3 className="text-base font-medium leading-[26px] text-black">Time-based price rules</h3>
+            <p className="text-base leading-[26px] text-[#52525B]">
+              A rule changes the price for slots inside its time range. If rules overlap, the one lower in the list wins.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-brand-border px-4 py-3">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-medium leading-[26px] text-black">Rules 1</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex h-8 items-center gap-1 rounded-lg border border-[#F1441E] px-3 text-xs font-semibold text-[#F1441E] transition-colors hover:bg-[#FEF3F2]"
+                  >
+                    <Trash size={16} />
+                    Remove
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-8 min-w-[130px] items-center justify-center gap-1 rounded-lg bg-brand-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0d4750]"
+                  >
+                    <Eye size={16} />
+                    Preview
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px w-full bg-brand-border" />
+
+              <div className="grid grid-cols-4 gap-4">
+                <Select
+                  label="Applies on"
+                  value={data.ruleAppliesOn}
+                  onChange={(v) => updateField('ruleAppliesOn', v)}
+                  options={APPLIES_ON}
                 />
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="bookable-from" className="text-sm font-medium text-black">
-                Bookable from
-              </label>
-              <input
-                id="bookable-from"
-                type="time"
-                value={data.bookableFrom}
-                onChange={(e) => updateField('bookableFrom', e.target.value)}
-                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="bookable-until" className="text-sm font-medium text-black">
-                Until
-              </label>
-              <input
-                id="bookable-until"
-                type="time"
-                value={data.bookableUntil}
-                onChange={(e) => updateField('bookableUntil', e.target.value)}
-                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </div>
-            <Select
-              label="Slot interval"
-              value={data.slotInterval}
-              onChange={(v) => updateField('slotInterval', v)}
-              options={INTERVALS}
-              placeholder="Select interval"
-            />
-          </div>
-          {startTimes.length > 0 && (
-            <div>
-              <p className="text-xs text-brand-textMuted">
-                Customers can start every <span className="font-medium text-black">{data.slotInterval}</span>. With these
-                settings, a day shows these start times:
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {startTimes.slice(0, MAX_VISIBLE_TIMES).map((time) => (
-                  <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
-                    {time}
-                  </span>
-                ))}
-                {startTimes.length > MAX_VISIBLE_TIMES && (
-                  <span className="text-xs text-brand-textMuted">
-                    +{startTimes.length - MAX_VISIBLE_TIMES} more
-                  </span>
-                )}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="rule-from" className="text-base leading-[26px] text-black">
+                    Bookable from
+                  </label>
+                  <input
+                    id="rule-from"
+                    type="time"
+                    value={data.ruleFrom}
+                    onChange={(e) => updateField('ruleFrom', e.target.value)}
+                    className="h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="rule-to" className="text-base leading-[26px] text-black">
+                    To
+                  </label>
+                  <input
+                    id="rule-to"
+                    type="time"
+                    value={data.ruleTo}
+                    onChange={(e) => updateField('ruleTo', e.target.value)}
+                    className="h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="rule-price" className="text-base leading-[26px] text-black">
+                    Price
+                  </label>
+                  <div className="flex h-9 items-center gap-1 rounded-lg border border-brand-border px-3 text-sm">
+                    <span className="text-brand-textMuted">$</span>
+                    <input
+                      id="rule-price"
+                      value={data.rulePrice}
+                      onChange={(e) => updateField('rulePrice', e.target.value)}
+                      className="w-full text-black outline-none"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+          </div>
+
+          <button
+            type="button"
+            className="flex h-9 items-center justify-center gap-2 rounded-lg border border-brand-border text-sm font-medium text-black transition-colors hover:bg-brand-surfaceMuted"
+          >
+            <Plus size={16} />
+            Add price rule
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-4">
+          <span id="payment-group-label" className="text-base font-medium leading-[26px] text-black">
+            Payment Method
+          </span>
+          <div role="group" aria-labelledby="payment-group-label" className="flex gap-4">
+            <CheckboxChip label="Drop In" checked={data.paymentDropIn} onChange={(v) => updateField('paymentDropIn', v)} />
+            <CheckboxChip
+              label="Class pack credits"
+              checked={data.paymentClassPack}
+              onChange={(v) => updateField('paymentClassPack', v)}
+            />
+          </div>
         </div>
       </Card>
     </WizardLayout>

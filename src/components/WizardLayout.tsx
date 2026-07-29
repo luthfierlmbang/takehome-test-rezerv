@@ -66,8 +66,9 @@ export function WizardLayout({
           )
         ) : (
           <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
+            // Opacity only — a y-offset would shift the first row off the design's 24px gap.
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="flex flex-1 flex-col gap-4"
           >

@@ -1,97 +1,140 @@
 import { useNavigate } from 'react-router-dom'
-import { MapPin } from '@phosphor-icons/react'
-import { motion } from 'framer-motion'
 import { WizardLayout } from '../components/WizardLayout'
-import { Toggle } from '../components/Toggle'
+import { Card } from '../components/Card'
+import { Select } from '../components/Select'
+import { CheckboxChip } from '../components/CheckboxChip'
 import { useBooking } from '../context/BookingContext'
-import janineUrl from '../assets/coach-janine.png'
-import lukeUrl from '../assets/coach-luke.png'
-import leiaUrl from '../assets/coach-leia.png'
-import hanUrl from '../assets/coach-han.png'
 
-const COACHES = [
-  { name: 'Janine Skuywalker', avatar: janineUrl },
-  { name: 'Luke Skywalker', avatar: lukeUrl },
-  { name: 'Leia Organa', avatar: leiaUrl },
-  { name: 'Han Solo', avatar: hanUrl },
-]
+const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
+/** A long range can generate dozens of slots; cap the preview so it stays one tidy row. */
+const MAX_VISIBLE_TIMES = 12
+const INTERVALS = ['Every 15 Min', 'Every 30 Min', 'Every Hour']
+
+function parseTimeToMinutes(value: string): number | null {
+  const [h, m] = value.split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  return h * 60 + m
+}
+
+function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60) % 24
+  const m = total % 60
+  const period = h >= 12 ? 'pm' : 'am'
+  const hour12 = h % 12 === 0 ? 12 : h % 12
+  return `${hour12}${m === 0 ? '' : `.${String(m).padStart(2, '0')}`}${period}`
+}
+
+function intervalMinutes(label: string): number {
+  if (label === 'Every 30 Min') return 30
+  if (label === 'Every Hour') return 60
+  return 15
+}
+
+function generateStartTimes(from: string, until: string, interval: string): string[] {
+  const start = parseTimeToMinutes(from)
+  const end = parseTimeToMinutes(until)
+  if (start === null || end === null || end <= start) return []
+  const step = intervalMinutes(interval)
+  const times: string[] = []
+  for (let t = start; t < end; t += step) {
+    times.push(formatMinutes(t))
+  }
+  return times
+}
 
 export default function Step4() {
   const navigate = useNavigate()
   const { data, updateField } = useBooking()
 
-  function toggleCoach(name: string, checked: boolean) {
+  function toggleDuration(label: string, checked: boolean) {
     updateField(
-      'selectedCoaches',
-      checked ? [...data.selectedCoaches, name] : data.selectedCoaches.filter((c) => c !== name),
+      'selectedDurations',
+      checked ? [...data.selectedDurations, label] : data.selectedDurations.filter((d) => d !== label),
     )
   }
 
+  const startTimes = generateStartTimes(data.bookableFrom, data.bookableUntil, data.slotInterval)
+
   return (
-    <WizardLayout stepIndex={1} onBack={() => navigate('/step-3')} onNext={() => navigate('/step-5')}>
-      <div className="flex flex-col gap-4">
-        <h2 className="text-2xl font-medium leading-[31px] text-black">Locations &amp; coaches</h2>
-        <p className="text-base leading-[26px] text-brand-textMuted">
-          Choose where this service is offered and who delivers it at each location.
+    <WizardLayout stepIndex={2} onBack={() => navigate('/step-3')} onNext={() => navigate('/step-5')}>
+      <div>
+        <h2 className="text-2xl font-medium leading-[31px] text-black">Durations &amp; booking slots</h2>
+        <p className="text-sm text-brand-textMuted">
+          Durations are what customers choose. The slot interval controls how often a new start time appears.
         </p>
       </div>
-
-      <div className="rounded-2xl border border-brand-border p-4">
+      <Card>
         <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col gap-1">
-              <span className="text-base font-medium leading-[26px] text-black">Padel Arena KLCC</span>
-              <span className="flex items-center gap-1 text-sm text-brand-textMuted">
-                <MapPin size={16} />
-                12 Jalan Ampang, Kuala Lumpur
-              </span>
+          <div>
+            <span id="duration-group-label" className="text-sm font-medium text-black">
+              Bookable durations
+            </span>
+            <div role="group" aria-labelledby="duration-group-label" className="mt-2 flex flex-wrap gap-2">
+              {DURATIONS.map((label) => (
+                <CheckboxChip
+                  key={label}
+                  label={label}
+                  checked={data.selectedDurations.includes(label)}
+                  onChange={(checked) => toggleDuration(label, checked)}
+                />
+              ))}
             </div>
-            <div className="flex items-center gap-2 text-sm text-brand-textMuted">
-              Offer at this location
-              <Toggle
-                label="Offer at this location"
-                checked={data.offerAtLocation}
-                onChange={(v) => updateField('offerAtLocation', v)}
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="bookable-from" className="text-sm font-medium text-black">
+                Bookable from
+              </label>
+              <input
+                id="bookable-from"
+                type="time"
+                value={data.bookableFrom}
+                onChange={(e) => updateField('bookableFrom', e.target.value)}
+                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
             </div>
-          </div>
-
-          <div className="border-t border-brand-border pt-4">
-            <span id="coach-group-label" className="text-base font-medium leading-[26px] text-black">
-              Coach
-            </span>
-            <div role="group" aria-labelledby="coach-group-label" className="mt-4 flex flex-wrap gap-4">
-              {COACHES.map((coach) => {
-                const checked = data.selectedCoaches.includes(coach.name)
-                return (
-                  <motion.label
-                    key={coach.name}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.985 }}
-                    transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-                    animate={{
-                      borderColor: checked ? '#083035' : '#E4E4E7',
-                      backgroundColor: checked ? 'rgba(8,48,53,0.04)' : 'rgba(255,255,255,0)',
-                    }}
-                    className="flex h-16 cursor-pointer items-center gap-4 rounded-lg border px-4"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => toggleCoach(coach.name, e.target.checked)}
-                      className="h-5 w-5 rounded accent-brand-primary"
-                    />
-                    <span className="flex items-center gap-2">
-                      <img src={coach.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
-                      <span className="text-sm font-medium text-black">{coach.name}</span>
-                    </span>
-                  </motion.label>
-                )
-              })}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="bookable-until" className="text-sm font-medium text-black">
+                Until
+              </label>
+              <input
+                id="bookable-until"
+                type="time"
+                value={data.bookableUntil}
+                onChange={(e) => updateField('bookableUntil', e.target.value)}
+                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+              />
             </div>
+            <Select
+              label="Slot interval"
+              value={data.slotInterval}
+              onChange={(v) => updateField('slotInterval', v)}
+              options={INTERVALS}
+              placeholder="Select interval"
+            />
           </div>
+          {startTimes.length > 0 && (
+            <div>
+              <p className="text-xs text-brand-textMuted">
+                Customers can start every <span className="font-medium text-black">{data.slotInterval}</span>. With these
+                settings, a day shows these start times:
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {startTimes.slice(0, MAX_VISIBLE_TIMES).map((time) => (
+                  <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
+                    {time}
+                  </span>
+                ))}
+                {startTimes.length > MAX_VISIBLE_TIMES && (
+                  <span className="text-xs text-brand-textMuted">
+                    +{startTimes.length - MAX_VISIBLE_TIMES} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </Card>
     </WizardLayout>
   )
 }

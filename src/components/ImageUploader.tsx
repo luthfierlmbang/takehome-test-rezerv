@@ -106,9 +106,11 @@ export function ImageUploader({
           <motion.img
             src={padelCourtUrl}
             alt="Service"
-            className="h-[250px] w-full rounded-lg object-cover"
-            initial={{ scale: 0.98, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+            className="h-[374px] w-full rounded-lg object-cover"
+            // Opacity only: a scale animation leaves the image a few px short of the
+            // design's 374px if it settles even slightly under 1.
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           />
           <motion.span

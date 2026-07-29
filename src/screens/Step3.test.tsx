@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { BookingProvider } from '../context/BookingContext'
 import Step3 from './Step3'
 
-test('renders and navigates back and forward', async () => {
+test('renders the location toggle and coach checkboxes, and lets a coach be selected', async () => {
   render(
     <MemoryRouter initialEntries={['/step-3']}>
       <BookingProvider>
@@ -13,7 +13,11 @@ test('renders and navigates back and forward', async () => {
     </MemoryRouter>,
   )
 
-  await waitFor(() => screen.getByRole('button', { name: 'Cancel' }))
-  expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled()
-  await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(screen.getByRole('switch', { name: 'Offer at this location' })).toBeInTheDocument())
+  expect(screen.getByText('Padel Arena KLCC')).toBeInTheDocument()
+
+  const coachCheckbox = screen.getByRole('checkbox', { name: 'Janine Skuywalker' })
+  expect(coachCheckbox).not.toBeChecked()
+  await userEvent.click(coachCheckbox)
+  expect(coachCheckbox).toBeChecked()
 })

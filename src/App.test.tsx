@@ -25,21 +25,17 @@ test(
     await userEvent.type(screen.getByLabelText('Service Name'), 'Personal Training')
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 2 -> 3
 
-    // Step 3 reuses Step2's field labels, so key off its unique "Image" section instead.
-    await waitFor(() => screen.getByText('Image'), { timeout: TRANSITION_TIMEOUT })
+    await waitFor(() => screen.getByText('Padel Arena KLCC'), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 3 -> 4
 
-    await waitFor(() => screen.getByText('Padel Arena KLCC'), { timeout: TRANSITION_TIMEOUT })
+    await waitFor(() => screen.getByRole('checkbox', { name: '1 Hour' }), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 4 -> 5
 
-    await waitFor(() => screen.getByRole('checkbox', { name: '1 Hour' }), { timeout: TRANSITION_TIMEOUT })
+    await waitFor(() => screen.getByLabelText(/Base price applies/), { timeout: TRANSITION_TIMEOUT })
     await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 5 -> 6
 
-    await waitFor(() => screen.getByLabelText('Base price'), { timeout: TRANSITION_TIMEOUT })
-    await userEvent.click(screen.getByRole('button', { name: 'Next' })) // step 6 -> 7
-
     await waitFor(() => screen.getByTestId('review-details'), { timeout: TRANSITION_TIMEOUT })
-    // Confirms context data survives the full Step1 -> Step7 chain (the review row).
+    // Confirms context data survives the full Step1 -> Step6 chain (the review row).
     expect(screen.getByText('Personal Training')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Publish Service' }))
 

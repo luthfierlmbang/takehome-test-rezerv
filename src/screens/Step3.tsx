@@ -1,76 +1,96 @@
 import { useNavigate } from 'react-router-dom'
+import { MapPin } from '@phosphor-icons/react'
+import { motion } from 'framer-motion'
 import { WizardLayout } from '../components/WizardLayout'
-import { Input } from '../components/Input'
-import { Select } from '../components/Select'
-import { ImageUploader } from '../components/ImageUploader'
+import { Toggle } from '../components/Toggle'
 import { useBooking } from '../context/BookingContext'
+import janineUrl from '../assets/coach-janine.png'
+import lukeUrl from '../assets/coach-luke.png'
+import leiaUrl from '../assets/coach-leia.png'
+import hanUrl from '../assets/coach-han.png'
 
-const SERVICE_TYPES = ['Padel', 'Tennis', 'Yoga', 'Personal Training']
-const BOOKING_CATEGORIES = ['Class', 'Private session', 'Court rental']
+const COACHES = [
+  { name: 'Janine Skuywalker', avatar: janineUrl },
+  { name: 'Luke Skywalker', avatar: lukeUrl },
+  { name: 'Leia Organa', avatar: leiaUrl },
+  { name: 'Han Solo', avatar: hanUrl },
+]
 
 export default function Step3() {
   const navigate = useNavigate()
   const { data, updateField } = useBooking()
 
+  function toggleCoach(name: string, checked: boolean) {
+    updateField(
+      'selectedCoaches',
+      checked ? [...data.selectedCoaches, name] : data.selectedCoaches.filter((c) => c !== name),
+    )
+  }
+
   return (
-    <WizardLayout
-      stepIndex={0}
-      skeleton="form"
-      backLabel="Cancel"
-      onBack={() => navigate('/step-2')}
-      onNext={() => navigate('/step-4')}
-    >
-      <div className="flex items-start gap-4">
-        <section className="flex-1 rounded-2xl border border-brand-border p-6">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4">
-              <h2 className="text-2xl font-medium leading-[31px] text-black">Basic details</h2>
-              <p className="text-base leading-[26px] text-brand-textMuted">
-                Add the essentials first. You'll set up locations, coaches, availability, and pricing next.
-              </p>
+    <WizardLayout stepIndex={1} onBack={() => navigate('/step-2')} onNext={() => navigate('/step-4')}>
+      <div className="flex flex-col gap-4">
+        <h2 className="text-2xl font-medium leading-[31px] text-black">Locations &amp; coaches</h2>
+        <p className="text-base leading-[26px] text-brand-textMuted">
+          Choose where this service is offered and who delivers it at each location.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-brand-border p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-1">
+              <span className="text-base font-medium leading-[26px] text-black">Padel Arena KLCC</span>
+              <span className="flex items-center gap-1 text-sm text-brand-textMuted">
+                <MapPin size={16} />
+                12 Jalan Ampang, Kuala Lumpur
+              </span>
             </div>
-            <div className="flex flex-col gap-4">
-            <Select
-              label="Service Type"
-              value={data.serviceType}
-              onChange={(v) => updateField('serviceType', v)}
-              options={SERVICE_TYPES}
-              placeholder="Padel"
-            />
-            <Input label="Service Name" value={data.serviceName} onChange={(v) => updateField('serviceName', v)} />
-            <Select
-              label="Booking category"
-              value={data.bookingCategory}
-              onChange={(v) => updateField('bookingCategory', v)}
-              options={BOOKING_CATEGORIES}
-              placeholder="Select a category"
-            />
-            <div className="flex flex-col gap-2">
-              <label htmlFor="description" className="text-base leading-[26px] text-black">
-                Description
-              </label>
-              <textarea
-                id="description"
-                value={data.serviceDescription}
-                onChange={(e) => updateField('serviceDescription', e.target.value)}
-                className="h-[122px] resize-none rounded-lg border border-brand-border px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
+            <div className="flex items-center gap-2 text-sm text-brand-textMuted">
+              Offer at this location
+              <Toggle
+                label="Offer at this location"
+                checked={data.offerAtLocation}
+                onChange={(v) => updateField('offerAtLocation', v)}
               />
             </div>
-            </div>
           </div>
-        </section>
 
-        <section className="flex-1 rounded-2xl border border-brand-border p-6">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4">
-              <h2 className="text-2xl font-medium leading-[31px] text-black">Image</h2>
-              <p className="text-base leading-[26px] text-brand-textMuted">
-                Add the essentials first. You'll set up locations, coaches, availability, and pricing next.
-              </p>
+          <div className="border-t border-brand-border pt-4">
+            <span id="coach-group-label" className="text-base font-medium leading-[26px] text-black">
+              Coach
+            </span>
+            <div role="group" aria-labelledby="coach-group-label" className="mt-4 flex flex-wrap gap-4">
+              {COACHES.map((coach) => {
+                const checked = data.selectedCoaches.includes(coach.name)
+                return (
+                  <motion.label
+                    key={coach.name}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                    animate={{
+                      borderColor: checked ? '#083035' : '#E4E4E7',
+                      backgroundColor: checked ? 'rgba(8,48,53,0.04)' : 'rgba(255,255,255,0)',
+                    }}
+                    className="flex h-16 cursor-pointer items-center gap-4 rounded-lg border px-4"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => toggleCoach(coach.name, e.target.checked)}
+                      className="h-5 w-5 rounded accent-brand-primary"
+                    />
+                    <span className="flex items-center gap-2">
+                      <img src={coach.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+                      <span className="text-sm font-medium text-black">{coach.name}</span>
+                    </span>
+                  </motion.label>
+                )
+              })}
             </div>
-            <ImageUploader hasImage onChange={(v) => updateField('hasImage', v)} />
           </div>
-        </section>
+        </div>
       </div>
     </WizardLayout>
   )

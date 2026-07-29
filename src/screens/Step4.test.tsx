@@ -1,10 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { BookingProvider } from '../context/BookingContext'
 import Step4 from './Step4'
 
-test('renders the location toggle and coach checkboxes, and lets a coach be selected', async () => {
+test('renders duration checkboxes and generates start-time chips from the slot settings', async () => {
   render(
     <MemoryRouter initialEntries={['/step-4']}>
       <BookingProvider>
@@ -13,11 +13,13 @@ test('renders the location toggle and coach checkboxes, and lets a coach be sele
     </MemoryRouter>,
   )
 
-  await waitFor(() => expect(screen.getByRole('switch', { name: 'Offer at this location' })).toBeInTheDocument())
-  expect(screen.getByText('Padel Arena KLCC')).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('checkbox', { name: '1 Hour' })).toBeInTheDocument())
+  await userEvent.click(screen.getByRole('checkbox', { name: '1 Hour' }))
+  expect(screen.getByRole('checkbox', { name: '1 Hour' })).toBeChecked()
 
-  const coachCheckbox = screen.getByRole('checkbox', { name: 'Janine Skuywalker' })
-  expect(coachCheckbox).not.toBeChecked()
-  await userEvent.click(coachCheckbox)
-  expect(coachCheckbox).toBeChecked()
+  fireEvent.change(screen.getByLabelText('Bookable from'), { target: { value: '12:15' } })
+  fireEvent.change(screen.getByLabelText('Until'), { target: { value: '13:00' } })
+  await userEvent.selectOptions(screen.getByLabelText('Slot interval'), 'Every 15 Min')
+
+  expect(screen.getByText('12.15pm')).toBeInTheDocument()
 })
