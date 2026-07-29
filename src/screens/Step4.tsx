@@ -80,9 +80,17 @@ export default function Step4() {
               ))}
             </div>
           </div>
+          {/* Figma orders these Slot Interval → Bookable from → Until. */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="bookable-from" className="text-sm font-medium text-black">
+            <Select
+              label="Slot Interval"
+              value={data.slotInterval}
+              onChange={(v) => updateField('slotInterval', v)}
+              options={INTERVALS}
+              placeholder="Select interval"
+            />
+            <div className="flex flex-col gap-2">
+              <label htmlFor="bookable-from" className="text-base leading-[26px] text-black">
                 Bookable from
               </label>
               <input
@@ -90,11 +98,11 @@ export default function Step4() {
                 type="time"
                 value={data.bookableFrom}
                 onChange={(e) => updateField('bookableFrom', e.target.value)}
-                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                className="h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="bookable-until" className="text-sm font-medium text-black">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="bookable-until" className="text-base leading-[26px] text-black">
                 Until
               </label>
               <input
@@ -102,16 +110,9 @@ export default function Step4() {
                 type="time"
                 value={data.bookableUntil}
                 onChange={(e) => updateField('bookableUntil', e.target.value)}
-                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                className="h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
             </div>
-            <Select
-              label="Slot interval"
-              value={data.slotInterval}
-              onChange={(v) => updateField('slotInterval', v)}
-              options={INTERVALS}
-              placeholder="Select interval"
-            />
           </div>
           {startTimes.length > 0 && (
             <div>

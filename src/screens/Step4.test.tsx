@@ -19,7 +19,7 @@ test('renders duration checkboxes and generates start-time chips from the slot s
 
   fireEvent.change(screen.getByLabelText('Bookable from'), { target: { value: '12:15' } })
   fireEvent.change(screen.getByLabelText('Until'), { target: { value: '13:00' } })
-  await userEvent.selectOptions(screen.getByLabelText('Slot interval'), 'Every 15 Min')
+  await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every 15 Min')
 
   expect(screen.getByText('12.15pm')).toBeInTheDocument()
 })
