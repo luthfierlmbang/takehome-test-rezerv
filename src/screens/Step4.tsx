@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { MapPin } from '@phosphor-icons/react'
+import { motion } from 'framer-motion'
 import { WizardLayout } from '../components/WizardLayout'
 import { Toggle } from '../components/Toggle'
 import { useBooking } from '../context/BookingContext'
@@ -63,9 +64,16 @@ export default function Step4() {
               {COACHES.map((coach) => {
                 const checked = data.selectedCoaches.includes(coach.name)
                 return (
-                  <label
+                  <motion.label
                     key={coach.name}
-                    className="flex h-16 cursor-pointer items-center gap-4 rounded-lg border border-brand-border px-4"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                    animate={{
+                      borderColor: checked ? '#083035' : '#E4E4E7',
+                      backgroundColor: checked ? 'rgba(8,48,53,0.04)' : 'rgba(255,255,255,0)',
+                    }}
+                    className="flex h-16 cursor-pointer items-center gap-4 rounded-lg border px-4"
                   >
                     <input
                       type="checkbox"
@@ -77,7 +85,7 @@ export default function Step4() {
                       <img src={coach.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
                       <span className="text-sm font-medium text-black">{coach.name}</span>
                     </span>
-                  </label>
+                  </motion.label>
                 )
               })}
             </div>

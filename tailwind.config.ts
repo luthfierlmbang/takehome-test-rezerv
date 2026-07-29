@@ -7,6 +7,9 @@ export default {
     extend: {
       colors: { brand: colors },
       borderRadius: { sm: radius.sm, lg: radius.lg },
+      keyframes: {
+        shimmer: { '100%': { transform: 'translateX(100%)' } },
+      },
     },
   },
   plugins: [],

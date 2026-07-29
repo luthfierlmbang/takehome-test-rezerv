@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { Trash, UploadSimple } from '@phosphor-icons/react'
 import { WizardLayout } from '../components/WizardLayout'
 import { Input } from '../components/Input'
 import { Select } from '../components/Select'
+import { ImageUploader } from '../components/ImageUploader'
 import { useBooking } from '../context/BookingContext'
-import padelCourtUrl from '../assets/padel-court.png'
 
 const SERVICE_TYPES = ['Padel', 'Tennis', 'Yoga', 'Personal Training']
 const BOOKING_CATEGORIES = ['Class', 'Private session', 'Court rental']
@@ -14,7 +13,13 @@ export default function Step3() {
   const { data, updateField } = useBooking()
 
   return (
-    <WizardLayout stepIndex={0} backLabel="Cancel" onBack={() => navigate('/step-2')} onNext={() => navigate('/step-4')}>
+    <WizardLayout
+      stepIndex={0}
+      skeleton="form"
+      backLabel="Cancel"
+      onBack={() => navigate('/step-2')}
+      onNext={() => navigate('/step-4')}
+    >
       <div className="flex gap-4">
         <section className="flex-1 rounded-2xl border border-brand-border p-6">
           <div className="flex flex-col gap-4">
@@ -62,24 +67,7 @@ export default function Step3() {
                 Add the essentials first. You'll set up locations, coaches, availability, and pricing next.
               </p>
             </div>
-            <img src={padelCourtUrl} alt="" className="h-[250px] w-full rounded-lg object-cover" />
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => updateField('hasImage', false)}
-                className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg border border-[#F5A3A3] text-xs font-semibold text-[#D92D20]"
-              >
-                <Trash size={16} />
-                Remove
-              </button>
-              <button
-                type="button"
-                className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg border border-brand-border text-xs font-semibold text-[#0B0B0B]"
-              >
-                <UploadSimple size={16} />
-                Change image
-              </button>
-            </div>
+            <ImageUploader hasImage onChange={(v) => updateField('hasImage', v)} />
           </div>
         </section>
       </div>

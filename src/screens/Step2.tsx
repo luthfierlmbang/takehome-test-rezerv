@@ -4,7 +4,7 @@ import { WizardLayout } from '../components/WizardLayout'
 import { Input } from '../components/Input'
 import { Select } from '../components/Select'
 import { useBooking } from '../context/BookingContext'
-import uploadFolderUrl from '../assets/upload-folder.svg'
+import { ImageUploader } from '../components/ImageUploader'
 
 const SERVICE_TYPES = ['Padel', 'Tennis', 'Yoga', 'Personal Training']
 const BOOKING_CATEGORIES = ['Class', 'Private session', 'Court rental']
@@ -24,7 +24,13 @@ export default function Step2() {
   }
 
   return (
-    <WizardLayout stepIndex={0} backLabel="Cancel" onBack={() => navigate('/step-1')} onNext={handleNext}>
+    <WizardLayout
+      stepIndex={0}
+      skeleton="form"
+      backLabel="Cancel"
+      onBack={() => navigate('/step-1')}
+      onNext={handleNext}
+    >
       <div className="flex gap-4">
         <section className="flex-1 rounded-2xl border border-brand-border p-6">
           <div className="flex flex-col gap-4">
@@ -79,20 +85,7 @@ export default function Step2() {
                 Use a clear image that helps customers recognise this service at a glance.
               </p>
             </div>
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-brand-border py-12 text-center">
-              <img src={uploadFolderUrl} alt="" className="h-[84px] w-[84px]" />
-              <p className="text-base leading-[26px] text-black">
-                No image uploaded yet — Drag &amp; Drop or{' '}
-                <button
-                  type="button"
-                  onClick={() => updateField('hasImage', true)}
-                  className="text-brand-primary underline"
-                >
-                  browse files
-                </button>
-              </p>
-              <span className="text-sm text-black">JPEG, PNG</span>
-            </div>
+            <ImageUploader hasImage={data.hasImage} onChange={(v) => updateField('hasImage', v)} />
           </div>
         </section>
       </div>

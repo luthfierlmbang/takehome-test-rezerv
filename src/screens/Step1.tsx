@@ -9,7 +9,7 @@ export default function Step1() {
 
   return (
     <AppShell title="Service">
-      <div className="flex flex-1 flex-col overflow-y-auto px-6 pb-6">
+      <div className="flex flex-1 flex-col overflow-y-auto px-6 pb-6 pt-6">
         <div className="flex flex-col items-center gap-[25px] rounded-2xl border border-brand-border p-6">
           <img src={heroUrl} alt="" className="h-[180px] w-[180px] object-contain" />
           <div className="flex w-full flex-col gap-4 text-center">

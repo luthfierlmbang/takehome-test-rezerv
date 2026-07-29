@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 export function Toggle({
   label,
   checked,
@@ -8,21 +10,23 @@ export function Toggle({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <button
+    <motion.button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-        checked ? 'bg-brand-primary' : 'bg-brand-border'
-      }`}
+      whileTap={{ scale: 0.94 }}
+      animate={{ backgroundColor: checked ? '#083035' : '#E4E4E7' }}
+      transition={{ duration: 0.2 }}
+      className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full px-0.5"
     >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-4' : 'translate-x-0.5'
-        }`}
+      <motion.span
+        layout
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+        className="h-5 w-5 rounded-full bg-white shadow-sm"
+        style={{ marginLeft: checked ? 'auto' : 0 }}
       />
-    </button>
+    </motion.button>
   )
 }

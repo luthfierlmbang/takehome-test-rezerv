@@ -14,7 +14,7 @@ test('fills service name and shows an empty image placeholder', async () => {
   )
 
   await waitFor(() => expect(screen.getByLabelText('Service Name')).toBeInTheDocument())
-  expect(screen.getByText(/no image uploaded/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'browse files' })).toBeInTheDocument()
 
   await userEvent.type(screen.getByLabelText('Service Name'), 'Personal Training')
   expect(screen.getByLabelText('Service Name')).toHaveValue('Personal Training')
