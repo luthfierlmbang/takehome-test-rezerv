@@ -17,6 +17,8 @@ export function TimeSelect({
   onChange,
   interval,
   after,
+  min,
+  max,
   disabled,
 }: {
   label: string
@@ -25,15 +27,22 @@ export function TimeSelect({
   interval: string
   /** Only offer times later than this one — used to keep "Until" after "Bookable from". */
   after?: string
+  /** Inclusive bounds, used to hold a price rule inside the bookable hours. */
+  min?: string
+  max?: string
   disabled?: boolean
 }) {
   const id = useId()
   const step = intervalMinutes(interval)
   const floor = after ? parseTimeToMinutes(after) : null
+  const lower = min ? parseTimeToMinutes(min) : null
+  const upper = max ? parseTimeToMinutes(max) : null
 
   const options: { value: string; label: string }[] = []
   for (let t = 0; t < MINUTES_IN_DAY; t += step) {
     if (floor !== null && t <= floor) continue
+    if (lower !== null && t < lower) continue
+    if (upper !== null && t > upper) continue
     options.push({ value: minutesToTimeValue(t), label: formatMinutes(t) })
   }
 

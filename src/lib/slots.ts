@@ -39,6 +39,17 @@ export function snapToInterval(value: string, interval: string): string {
   return minutesToTimeValue(Math.floor(minutes / step) * step)
 }
 
+/** Holds a time inside [min, max]; blank bounds are ignored. Returns '' for unparseable input. */
+export function clampToWindow(value: string, min: string, max: string): string {
+  const minutes = parseTimeToMinutes(value)
+  if (minutes === null) return ''
+  const lower = parseTimeToMinutes(min)
+  const upper = parseTimeToMinutes(max)
+  if (lower !== null && minutes < lower) return minutesToTimeValue(lower)
+  if (upper !== null && minutes > upper) return minutesToTimeValue(upper)
+  return value
+}
+
 export function generateStartMinutes(from: string, until: string, interval: string): number[] {
   const start = parseTimeToMinutes(from)
   const end = parseTimeToMinutes(until)

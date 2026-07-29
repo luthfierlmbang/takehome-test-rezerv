@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeSlash, Plus, Trash } from '@phosphor-icons/react'
 import { WizardLayout } from '../components/WizardLayout'
@@ -6,14 +6,55 @@ import { Card } from '../components/Card'
 import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
 import { PricePreview } from '../components/PricePreview'
+import { TimeSelect } from '../components/TimeSelect'
 import { useBooking } from '../context/BookingContext'
+import { clampToWindow, snapToInterval } from '../lib/slots'
 
 const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
+
+/** Keeps money fields to digits and a single decimal point. */
+function toAmount(raw: string): string {
+  const cleaned = raw.replace(/[^\d.]/g, '')
+  const [whole, ...rest] = cleaned.split('.')
+  return rest.length ? `${whole}.${rest.join('').slice(0, 2)}` : whole
+}
 
 export default function Step5() {
   const navigate = useNavigate()
   const { data, updateField } = useBooking()
   const [previewOpen, setPreviewOpen] = useState(false)
+
+  const scheduleReady = Boolean(data.slotInterval && data.bookableFrom && data.bookableUntil)
+
+  /**
+   * The Schedule step owns the grid, so when it changes a rule set earlier can fall off
+   * it — 13:15 under a 30-minute interval, or 8am once the day starts at 9am. Pull the
+   * stored window back onto the grid rather than letting it price slots that don't exist.
+   */
+  useEffect(() => {
+    if (!scheduleReady) return
+
+    const reconcile = (value: string) => {
+      if (!value) return value
+      return clampToWindow(snapToInterval(value, data.slotInterval), data.bookableFrom, data.bookableUntil)
+    }
+
+    const from = reconcile(data.ruleFrom)
+    const to = reconcile(data.ruleTo)
+    if (from !== data.ruleFrom) updateField('ruleFrom', from)
+    // A window that collapsed to zero length no longer describes anything.
+    if (to !== data.ruleTo || (from && to && to <= from)) {
+      updateField('ruleTo', to > from ? to : '')
+    }
+    // Deliberately keyed to the schedule only: re-running on every rule edit would fight the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.slotInterval, data.bookableFrom, data.bookableUntil, scheduleReady])
+
+  function handleRuleFromChange(value: string) {
+    updateField('ruleFrom', value)
+    // An end at or before the new start can no longer stand.
+    if (data.ruleTo && data.ruleTo <= value) updateField('ruleTo', '')
+  }
 
   return (
     <WizardLayout stepIndex={3} onBack={() => navigate('/step-4')} onNext={() => navigate('/step-6')}>
@@ -35,8 +76,9 @@ export default function Step5() {
               <span className="text-brand-textMuted">$</span>
               <input
                 id="base-price"
+                inputMode="decimal"
                 value={data.basePrice}
-                onChange={(e) => updateField('basePrice', e.target.value)}
+                onChange={(e) => updateField('basePrice', toAmount(e.target.value))}
                 className="w-full text-black outline-none"
               />
             </div>
@@ -88,30 +130,26 @@ export default function Step5() {
                   onChange={(v) => updateField('ruleAppliesOn', v)}
                   options={APPLIES_ON}
                 />
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="rule-from" className="text-base leading-[26px] text-black">
-                    Bookable from
-                  </label>
-                  <input
-                    id="rule-from"
-                    type="time"
-                    value={data.ruleFrom}
-                    onChange={(e) => updateField('ruleFrom', e.target.value)}
-                    className="h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="rule-to" className="text-base leading-[26px] text-black">
-                    To
-                  </label>
-                  <input
-                    id="rule-to"
-                    type="time"
-                    value={data.ruleTo}
-                    onChange={(e) => updateField('ruleTo', e.target.value)}
-                    className="h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
-                  />
-                </div>
+                {/* A rule can only cover slots that exist, so it rides the same grid and
+                    stays inside the bookable hours set on the Schedule step. */}
+                <TimeSelect
+                  label="Bookable from"
+                  value={data.ruleFrom}
+                  onChange={handleRuleFromChange}
+                  interval={data.slotInterval}
+                  min={data.bookableFrom}
+                  max={data.bookableUntil}
+                  disabled={!scheduleReady}
+                />
+                <TimeSelect
+                  label="To"
+                  value={data.ruleTo}
+                  onChange={(v) => updateField('ruleTo', v)}
+                  interval={data.slotInterval}
+                  after={data.ruleFrom}
+                  max={data.bookableUntil}
+                  disabled={!scheduleReady}
+                />
                 <div className="flex flex-col gap-2">
                   <label htmlFor="rule-price" className="text-base leading-[26px] text-black">
                     Price
@@ -120,13 +158,20 @@ export default function Step5() {
                     <span className="text-brand-textMuted">$</span>
                     <input
                       id="rule-price"
+                      inputMode="decimal"
                       value={data.rulePrice}
-                      onChange={(e) => updateField('rulePrice', e.target.value)}
+                      onChange={(e) => updateField('rulePrice', toAmount(e.target.value))}
                       className="w-full text-black outline-none"
                     />
                   </div>
                 </div>
               </div>
+
+              {!scheduleReady && (
+                <p className="text-xs text-brand-textMuted">
+                  Set the slot interval and bookable hours on the Schedule step to add a time-based rule.
+                </p>
+              )}
 
               <div id="rule-price-preview">{previewOpen && <PricePreview data={data} />}</div>
             </div>
