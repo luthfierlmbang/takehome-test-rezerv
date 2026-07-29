@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Plus, Trash } from '@phosphor-icons/react'
+import { Eye, EyeSlash, Plus, Trash } from '@phosphor-icons/react'
 import { WizardLayout } from '../components/WizardLayout'
 import { Card } from '../components/Card'
 import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
+import { PricePreview } from '../components/PricePreview'
 import { useBooking } from '../context/BookingContext'
 
 const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
@@ -11,6 +13,7 @@ const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
 export default function Step5() {
   const navigate = useNavigate()
   const { data, updateField } = useBooking()
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   return (
     <WizardLayout stepIndex={3} onBack={() => navigate('/step-4')} onNext={() => navigate('/step-6')}>
@@ -65,10 +68,13 @@ export default function Step5() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setPreviewOpen((open) => !open)}
+                    aria-expanded={previewOpen}
+                    aria-controls="rule-price-preview"
                     className="flex h-8 min-w-[130px] items-center justify-center gap-1 rounded-lg bg-brand-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0d4750]"
                   >
-                    <Eye size={16} />
-                    Preview
+                    {previewOpen ? <EyeSlash size={16} /> : <Eye size={16} />}
+                    {previewOpen ? 'Hide preview' : 'Preview'}
                   </button>
                 </div>
               </div>
@@ -121,6 +127,8 @@ export default function Step5() {
                   </div>
                 </div>
               </div>
+
+              <div id="rule-price-preview">{previewOpen && <PricePreview data={data} />}</div>
             </div>
           </div>
 
