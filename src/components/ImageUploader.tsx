@@ -23,6 +23,9 @@ export function ImageUploader({
 }) {
   const [state, setState] = useState<UploadState>(hasImage ? 'done' : 'empty')
   const [progress, setProgress] = useState(0)
+  // "Change image" replaces a picture that is already on screen; keeping it visible under
+  // the progress overlay stops the card collapsing 374px -> 284px and springing back.
+  const [replacing, setReplacing] = useState(false)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
@@ -31,6 +34,7 @@ export function ImageUploader({
     if (state === 'uploading') return
     timers.current.forEach(clearTimeout)
     timers.current = []
+    setReplacing(state === 'done')
     setState('uploading')
     setProgress(0)
 
@@ -53,12 +57,64 @@ export function ImageUploader({
   function reset() {
     timers.current.forEach(clearTimeout)
     timers.current = []
+    setReplacing(false)
     setState('empty')
     setProgress(0)
     onChange(false)
   }
 
+  /* Width is driven by inline style + CSS transition: a Framer `width` animation leaves
+     the fill at its laid-out 100%, so the bar reads as full from the very first frame. */
+  const bar = (onImage: boolean) => (
+    <div className="w-56">
+      <div
+        role="progressbar"
+        aria-label="Uploading image"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className={`h-1.5 w-full overflow-hidden rounded-full ${onImage ? 'bg-white/30' : 'bg-brand-surfaceMuted'}`}
+      >
+        <div
+          className={`h-full rounded-full transition-[width] duration-300 ease-out ${
+            onImage ? 'bg-white' : 'bg-brand-primary'
+          }`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className={`mt-2 text-sm ${onImage ? 'text-white' : 'text-brand-textMuted'}`}>Uploading… {progress}%</p>
+    </div>
+  )
+
   if (state === 'uploading') {
+    // Replacing: the old picture stays put under a scrim, so nothing reflows.
+    if (replacing) {
+      return (
+        <div className="flex flex-col gap-4">
+          <div className="relative h-[374px] w-full overflow-hidden rounded-lg">
+            <img src={padelCourtUrl} alt="Service" className="h-full w-full object-cover" />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/55 text-center"
+            >
+              <motion.img
+                src={uploadFolderUrl}
+                alt=""
+                className="h-[84px] w-[84px]"
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              {bar(true)}
+            </motion.div>
+          </div>
+          {/* Placeholder for the button row so the card keeps its full height. */}
+          <div className="h-8" />
+        </div>
+      )
+    }
+
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -73,23 +129,7 @@ export function ImageUploader({
           animate={{ y: [0, -6, 0] }}
           transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <div className="w-56">
-          <div
-            role="progressbar"
-            aria-label="Uploading image"
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            className="h-1.5 w-full overflow-hidden rounded-full bg-brand-surfaceMuted"
-          >
-            <motion.div
-              className="h-full rounded-full bg-brand-primary"
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            />
-          </div>
-          <p className="mt-2 text-sm text-brand-textMuted">Uploading… {progress}%</p>
-        </div>
+        {bar(false)}
       </motion.div>
     )
   }
@@ -97,7 +137,10 @@ export function ImageUploader({
   if (state === 'done') {
     return (
       <motion.div
-        initial={{ opacity: 0 }}
+        // After a replace the picture was never off screen, so fading the block back in
+        // would read as a blink. Guard the wrapper, not the image: a parent's opacity
+        // multiplies through, so a wrapper fading from 0 dims the image regardless.
+        initial={{ opacity: replacing ? 1 : 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
         className="flex flex-col gap-4"
@@ -109,7 +152,7 @@ export function ImageUploader({
             className="h-[374px] w-full rounded-lg object-cover"
             // Opacity only: a scale animation leaves the image a few px short of the
             // design's 374px if it settles even slightly under 1.
-            initial={{ opacity: 0 }}
+            initial={{ opacity: replacing ? 1 : 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           />

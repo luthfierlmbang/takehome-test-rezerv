@@ -86,9 +86,9 @@ test('Until only offers times after the chosen start', async () => {
   await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '10:00')
 
   const until = optionsOf(screen.getByLabelText('Until'))
-  expect(until).toContain('11am')
-  expect(until).not.toContain('10am')
-  expect(until).not.toContain('9am')
+  expect(until).toContain('11.00am')
+  expect(until).not.toContain('10.00am')
+  expect(until).not.toContain('9.00am')
 })
 
 test('clears an end time that would fall at or before a newly picked start', async () => {

@@ -25,7 +25,7 @@ test('renders base price and payment method checkboxes', async () => {
   expect(dropIn).toBeChecked()
 })
 
-test('Preview reveals the per-slot prices a customer would see, and hides again', async () => {
+test('the preview prices each slot, and the button hides it again', async () => {
   renderStep5({
     slotInterval: 'Every Hour',
     bookableFrom: '12:00',
@@ -34,44 +34,35 @@ test('Preview reveals the per-slot prices a customer would see, and hides again'
     priceRules: [{ id: 'r1', appliesOn: 'Weekdays', from: '13:00', to: '14:00', price: '14.00' }],
   })
 
-  const preview = await waitFor(() => screen.getByRole('button', { name: /Preview/ }))
-  expect(preview).toHaveAttribute('aria-expanded', 'false')
+  // Figma shows the preview expanded, so it is on screen without being asked for.
+  const panel = await waitFor(() => screen.getByText(/Price on Every Weekdays/).parentElement as HTMLElement)
+  expect(screen.getByRole('button', { name: /Hide preview/ })).toHaveAttribute('aria-expanded', 'true')
 
-  await userEvent.click(preview)
-
-  const panel = screen.getByText(/What a customer sees on/).closest('div') as HTMLElement
-  // The summary text is split across spans, so assert on the panel's flattened text.
-  expect(panel.textContent).toMatch(/1 of 3 slots use this rule/)
-
-  // Scoped to the panel: these times also exist as <option>s in the rule's time selects.
   // 1pm falls inside the rule window, so it carries the rule price rather than the base.
-  expect(within(panel).getByText('1pm')).toBeInTheDocument()
-  expect(within(panel).getByText('$14.00')).toBeInTheDocument()
+  expect(within(panel).getByText(/1\.00pm price/)).toHaveTextContent('$14.00')
   // The two slots outside the window keep the base price.
   expect(within(panel).getAllByText('$20')).toHaveLength(2)
 
   await userEvent.click(screen.getByRole('button', { name: /Hide preview/ }))
-  expect(screen.queryByText(/What a customer sees on/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/Price on Every Weekdays/)).not.toBeInTheDocument()
 })
 
-test('Preview explains what is missing when the schedule has no hours yet', async () => {
+test('the preview explains what is missing when the schedule has no hours yet', async () => {
   renderStep5({ slotInterval: '', bookableFrom: '', bookableUntil: '' })
 
-  await userEvent.click(await waitFor(() => screen.getByRole('button', { name: /Preview/ })))
-
-  expect(screen.getByText(/Set the bookable hours on the Schedule step/)).toBeInTheDocument()
+  expect(await waitFor(() => screen.getByText(/Set the bookable hours on the Schedule step/))).toBeInTheDocument()
 })
 
 test('the rule window waits for a schedule and then rides its interval', async () => {
   const { unmount } = renderStep5({ slotInterval: '', bookableFrom: '', bookableUntil: '' })
 
-  await waitFor(() => expect(screen.getByLabelText('Bookable from')).toBeDisabled())
+  await waitFor(() => expect(screen.getByLabelText('Time book from')).toBeDisabled())
   expect(screen.getByText(/Set the slot interval and bookable hours/)).toBeInTheDocument()
   unmount()
 
   renderStep5({ slotInterval: 'Every Hour', bookableFrom: '09:00', bookableUntil: '17:00' })
 
-  const from = await waitFor(() => screen.getByLabelText('Bookable from'))
+  const from = await waitFor(() => screen.getByLabelText('Time book from'))
   expect(from).toBeEnabled()
 
   const options = within(from)
@@ -81,10 +72,10 @@ test('the rule window waits for a schedule and then rides its interval', async (
 
   // Hourly grid, and never outside the bookable day.
   expect(options).not.toContain('9.30am')
-  expect(options).not.toContain('8am')
-  expect(options).not.toContain('6pm')
-  expect(options).toContain('9am')
-  expect(options).toContain('5pm')
+  expect(options).not.toContain('8.00am')
+  expect(options).not.toContain('6.00pm')
+  expect(options).toContain('9.00am')
+  expect(options).toContain('5.00pm')
 })
 
 test('pulls a rule window back onto the grid when the schedule narrows it', async () => {
@@ -96,7 +87,7 @@ test('pulls a rule window back onto the grid when the schedule narrows it', asyn
     priceRules: [{ id: 'r1', appliesOn: 'Weekdays', from: '13:15', to: '14:00', price: '14.00' }],
   })
 
-  await waitFor(() => expect(screen.getByLabelText('Bookable from')).toHaveValue('12:00'))
+  await waitFor(() => expect(screen.getByLabelText('Time book from')).toHaveValue('12:00'))
   // The window collapsed, so the end is cleared rather than left inverted.
   expect(screen.getByLabelText('To')).toHaveValue('')
 })
@@ -139,15 +130,15 @@ test('a second same-day rule cannot claim hours the first already owns', async (
 
   await waitFor(() => screen.getByText('Rules 2'))
 
-  const options = within(screen.getAllByLabelText('Bookable from')[1])
+  const options = within(screen.getAllByLabelText('Time book from')[1])
     .getAllByRole('option')
     .map((o) => o.textContent)
 
   // 13:00-15:00 belongs to rule 1, so those starts are gone from rule 2.
-  expect(options).not.toContain('1pm')
-  expect(options).not.toContain('2pm')
-  expect(options).toContain('12pm')
-  expect(options).toContain('3pm')
+  expect(options).not.toContain('1.00pm')
+  expect(options).not.toContain('2.00pm')
+  expect(options).toContain('12.00pm')
+  expect(options).toContain('3.00pm')
 })
 
 test('a weekend rule is free to use hours a weekday rule owns', async () => {
@@ -161,11 +152,11 @@ test('a weekend rule is free to use hours a weekday rule owns', async () => {
 
   await waitFor(() => screen.getByText('Rules 2'))
 
-  const options = within(screen.getAllByLabelText('Bookable from')[1])
+  const options = within(screen.getAllByLabelText('Time book from')[1])
     .getAllByRole('option')
     .map((o) => o.textContent)
 
   // Different days never collide, so nothing is withheld.
-  expect(options).toContain('1pm')
-  expect(options).toContain('2pm')
+  expect(options).toContain('1.00pm')
+  expect(options).toContain('2.00pm')
 })

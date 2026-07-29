@@ -16,13 +16,13 @@ export function minutesToTimeValue(total: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-/** Display form used on chips, e.g. 12.15pm / 1pm. */
+/** Display form used on chips, e.g. 12.15pm / 1.00pm — minutes are always shown. */
 export function formatMinutes(total: number): string {
   const h = Math.floor(total / 60) % 24
   const m = total % 60
   const period = h >= 12 ? 'pm' : 'am'
   const hour12 = h % 12 === 0 ? 12 : h % 12
-  return `${hour12}${m === 0 ? '' : `.${String(m).padStart(2, '0')}`}${period}`
+  return `${hour12}.${String(m).padStart(2, '0')}${period}`
 }
 
 export function intervalMinutes(label: string): number {

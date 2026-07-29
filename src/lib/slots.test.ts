@@ -15,8 +15,8 @@ test('snaps a time down onto the interval grid', () => {
 })
 
 test('generates start times on the chosen interval', () => {
-  expect(generateStartTimes('12:00', '13:00', 'Every 15 Min')).toEqual(['12pm', '12.15pm', '12.30pm', '12.45pm'])
-  expect(generateStartTimes('12:00', '13:00', 'Every Hour')).toEqual(['12pm'])
+  expect(generateStartTimes('12:00', '13:00', 'Every 15 Min')).toEqual(['12.00pm', '12.15pm', '12.30pm', '12.45pm'])
+  expect(generateStartTimes('12:00', '13:00', 'Every Hour')).toEqual(['12.00pm'])
   // An end at or before the start yields nothing rather than looping.
   expect(generateStartTimes('13:00', '12:00', 'Every Hour')).toEqual([])
 })
@@ -31,9 +31,9 @@ test('prices only the slots that start inside the rule window', () => {
   })
 
   expect(slots).toEqual([
-    { time: '12pm', price: '20', ruledBy: null },
-    { time: '1pm', price: '14.00', ruledBy: 'a' },
-    { time: '2pm', price: '20', ruledBy: null },
+    { time: '12.00pm', price: '20', ruledBy: null },
+    { time: '1.00pm', price: '14.00', ruledBy: 'a' },
+    { time: '2.00pm', price: '20', ruledBy: null },
   ])
 })
 
@@ -62,11 +62,11 @@ test('where rules overlap, the later one wins', () => {
   })
 
   expect(slots).toEqual([
-    { time: '12pm', price: '30', ruledBy: 'early' },
-    { time: '1pm', price: '30', ruledBy: 'early' },
+    { time: '12.00pm', price: '30', ruledBy: 'early' },
+    { time: '1.00pm', price: '30', ruledBy: 'early' },
     // 2pm sits in both windows; the rule lower in the list takes it.
-    { time: '2pm', price: '40', ruledBy: 'late' },
-    { time: '3pm', price: '40', ruledBy: 'late' },
+    { time: '2.00pm', price: '40', ruledBy: 'late' },
+    { time: '3.00pm', price: '40', ruledBy: 'late' },
   ])
 })
 

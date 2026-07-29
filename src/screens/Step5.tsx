@@ -22,7 +22,8 @@ function toAmount(raw: string): string {
 export default function Step5() {
   const navigate = useNavigate()
   const { data, updateField, addPriceRule, updatePriceRule, removePriceRule } = useBooking()
-  const [openPreviewId, setOpenPreviewId] = useState<string | null>(null)
+  // Figma shows the preview expanded, so it is visible unless explicitly hidden.
+  const [hiddenPreviews, setHiddenPreviews] = useState<string[]>([])
 
   const scheduleReady = Boolean(data.slotInterval && data.bookableFrom && data.bookableUntil)
 
@@ -59,11 +60,6 @@ export default function Step5() {
     if (rule?.to && rule.to <= value) updatePriceRule(id, 'to', '')
   }
 
-  /**
-   * Hours already claimed by another rule that can fall on the same day. Two Weekdays
-   * rules may coexist at different hours, but never over the same hour; Weekdays and
-   * Weekends never collide; "Every day" collides with both.
-   */
   /**
    * Widening a rule's days can drag it onto hours another rule already owns, so drop a
    * window that would now collide rather than leaving two rules fighting over a slot.
@@ -141,7 +137,7 @@ export default function Step5() {
           )}
 
           {data.priceRules.map((rule, index) => {
-            const previewOpen = openPreviewId === rule.id
+            const previewOpen = !hiddenPreviews.includes(rule.id)
             const priceId = `${rule.id}-price`
             const claimed = claimedHoursFor(rule)
             return (
@@ -161,7 +157,11 @@ export default function Step5() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setOpenPreviewId(previewOpen ? null : rule.id)}
+                        onClick={() =>
+                          setHiddenPreviews((hidden) =>
+                            previewOpen ? [...hidden, rule.id] : hidden.filter((id) => id !== rule.id),
+                          )
+                        }
                         aria-expanded={previewOpen}
                         aria-label={previewOpen ? `Hide preview for rule ${index + 1}` : `Preview rule ${index + 1}`}
                         className="flex h-8 min-w-[130px] items-center justify-center gap-1 rounded-lg bg-brand-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0d4750]"
@@ -185,7 +185,7 @@ export default function Step5() {
                         stays inside the bookable hours set on the Schedule step. `blocked`
                         additionally hides hours another same-day rule already claims. */}
                     <TimeSelect
-                      label="Bookable from"
+                      label="Time book from"
                       value={rule.from}
                       onChange={(v) => handleRuleFromChange(rule.id, v)}
                       interval={data.slotInterval}
