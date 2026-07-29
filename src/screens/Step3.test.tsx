@@ -13,7 +13,7 @@ test('renders and navigates back and forward', async () => {
     </MemoryRouter>,
   )
 
-  await waitFor(() => screen.getByRole('button', { name: 'Back' }))
-  expect(screen.getByRole('button', { name: 'Back' })).not.toBeDisabled()
+  await waitFor(() => screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled()
   await userEvent.click(screen.getByRole('button', { name: 'Next' }))
 })

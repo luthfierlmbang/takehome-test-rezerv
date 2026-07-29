@@ -1,28 +1,50 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
 export type BookingData = {
+  serviceType: string
   serviceName: string
+  bookingCategory: string
   serviceDescription: string
-  location: string
-  coach: string
-  duration: string
-  price: string
-  paymentMethod: string
+  hasImage: boolean
+  offerAtLocation: boolean
+  selectedCoaches: string[]
+  selectedDurations: string[]
+  bookableFrom: string
+  bookableUntil: string
+  slotInterval: string
+  basePrice: string
+  ruleAppliesOn: string
+  ruleFrom: string
+  ruleTo: string
+  rulePrice: string
+  paymentDropIn: boolean
+  paymentClassPack: boolean
 }
 
 const INITIAL_DATA: BookingData = {
+  serviceType: '',
   serviceName: '',
+  bookingCategory: '',
   serviceDescription: '',
-  location: '',
-  coach: '',
-  duration: '',
-  price: '',
-  paymentMethod: '',
+  hasImage: false,
+  offerAtLocation: true,
+  selectedCoaches: [],
+  selectedDurations: [],
+  bookableFrom: '',
+  bookableUntil: '',
+  slotInterval: '',
+  basePrice: '',
+  ruleAppliesOn: '',
+  ruleFrom: '',
+  ruleTo: '',
+  rulePrice: '',
+  paymentDropIn: false,
+  paymentClassPack: false,
 }
 
 type BookingContextValue = {
   data: BookingData
-  updateField: (key: keyof BookingData, value: string) => void
+  updateField: <K extends keyof BookingData>(key: K, value: BookingData[K]) => void
   currentStepIndex: number
   goToStep: (index: number) => void
 }
@@ -42,7 +64,7 @@ export function BookingProvider({
   const [data, setData] = useState<BookingData>({ ...INITIAL_DATA, ...initialData })
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
-  function updateField(key: keyof BookingData, value: string) {
+  function updateField<K extends keyof BookingData>(key: K, value: BookingData[K]) {
     setData((prev) => ({ ...prev, [key]: value }))
   }
 

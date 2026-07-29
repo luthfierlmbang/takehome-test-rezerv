@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
 import { BookingProvider } from '../context/BookingContext'
 import Step6 from './Step6'
 
-test('renders price and payment method fields', async () => {
+test('renders base price and payment method checkboxes', async () => {
   render(
     <MemoryRouter initialEntries={['/step-6']}>
       <BookingProvider>
@@ -13,5 +14,9 @@ test('renders price and payment method fields', async () => {
   )
 
   await waitFor(() => expect(screen.getByLabelText('Base price')).toBeInTheDocument())
-  expect(screen.getByLabelText('Payment method')).toBeInTheDocument()
+
+  const dropIn = screen.getByRole('checkbox', { name: 'Drop In' })
+  expect(dropIn).not.toBeChecked()
+  await userEvent.click(dropIn)
+  expect(dropIn).toBeChecked()
 })

@@ -30,9 +30,9 @@ test('publishing shows a loading state then a success confirmation', async () =>
     </MemoryRouter>,
   )
 
-  await waitFor(() => screen.getByRole('button', { name: 'Publish' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
-  expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+  await waitFor(() => screen.getByRole('button', { name: 'Publish Service' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Publish Service' }))
+  expect(screen.getByRole('button', { name: 'Publish Service' })).toBeDisabled()
 
   await waitFor(() => expect(screen.getByText(/service published/i)).toBeInTheDocument())
 })
@@ -46,11 +46,11 @@ test('publishing failure shows the error banner and a retry succeeds', async () 
     </MemoryRouter>,
   )
 
-  await waitFor(() => screen.getByRole('button', { name: 'Publish' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+  await waitFor(() => screen.getByRole('button', { name: 'Publish Service' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Publish Service' }))
 
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/publishing failed/i))
 
-  await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Publish Service' }))
   await waitFor(() => expect(screen.getByText(/service published/i)).toBeInTheDocument())
 })

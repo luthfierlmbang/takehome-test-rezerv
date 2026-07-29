@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { StepLayout } from '../components/StepLayout'
-import { Card } from '../components/Card'
+import { WizardLayout } from '../components/WizardLayout'
 import { Input } from '../components/Input'
-import { EmptyState } from '../components/EmptyState'
+import { Select } from '../components/Select'
 import { useBooking } from '../context/BookingContext'
+import uploadFolderUrl from '../assets/upload-folder.svg'
+
+const SERVICE_TYPES = ['Padel', 'Tennis', 'Yoga', 'Personal Training']
+const BOOKING_CATEGORIES = ['Class', 'Private session', 'Court rental']
 
 export default function Step2() {
   const navigate = useNavigate()
@@ -21,35 +24,78 @@ export default function Step2() {
   }
 
   return (
-    <StepLayout
-      stepIndex={1}
-      title="Basic details"
-      description="Give your service a name and description."
-      onBack={() => navigate('/step-1')}
-      onNext={handleNext}
-    >
+    <WizardLayout stepIndex={0} backLabel="Cancel" onBack={() => navigate('/step-1')} onNext={handleNext}>
       <div className="flex gap-4">
-        <Card>
+        <section className="flex-1 rounded-2xl border border-brand-border p-6">
           <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-medium leading-[31px] text-black">Basic details</h2>
+              <p className="text-base leading-[26px] text-brand-textMuted">
+                Add the essentials first. You'll set up locations, coaches, availability, and pricing next.
+              </p>
+            </div>
+            <Select
+              label="Service Type"
+              value={data.serviceType}
+              onChange={(v) => updateField('serviceType', v)}
+              options={SERVICE_TYPES}
+              placeholder="Padel"
+            />
             <Input
-              label="Service name"
+              label="Service Name"
               value={data.serviceName}
               onChange={(v) => updateField('serviceName', v)}
               error={error}
-              placeholder="e.g. Personal Training"
+              placeholder="e.g. Private Padel Coaching"
             />
-            <Input
-              label="Description"
-              value={data.serviceDescription}
-              onChange={(v) => updateField('serviceDescription', v)}
-              placeholder="What does this service include?"
+            <Select
+              label="Booking category"
+              value={data.bookingCategory}
+              onChange={(v) => updateField('bookingCategory', v)}
+              options={BOOKING_CATEGORIES}
+              placeholder="Select a category"
             />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="description" className="text-sm font-medium text-black">
+                Description
+              </label>
+              <textarea
+                id="description"
+                value={data.serviceDescription}
+                onChange={(e) => updateField('serviceDescription', e.target.value)}
+                placeholder="Tell customers what this service includes, who it's for, and what they should bring."
+                rows={3}
+                className="rounded-lg border border-brand-border px-3 py-2 text-sm text-black outline-none placeholder:text-[#A1A1AA] focus:ring-2 focus:ring-brand-primary/40"
+              />
+            </div>
           </div>
-        </Card>
-        <Card>
-          <EmptyState label="No image uploaded yet" actionLabel="Upload image" onAction={() => {}} />
-        </Card>
+        </section>
+
+        <section className="flex-1 rounded-2xl border border-brand-border p-6">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-medium leading-[31px] text-black">Add a service image</h2>
+              <p className="text-base leading-[26px] text-brand-textMuted">
+                Use a clear image that helps customers recognise this service at a glance.
+              </p>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-brand-border py-12 text-center">
+              <img src={uploadFolderUrl} alt="" className="h-[84px] w-[84px]" />
+              <p className="text-base leading-[26px] text-black">
+                No image uploaded yet — Drag &amp; Drop or{' '}
+                <button
+                  type="button"
+                  onClick={() => updateField('hasImage', true)}
+                  className="text-brand-primary underline"
+                >
+                  browse files
+                </button>
+              </p>
+              <span className="text-sm text-black">JPEG, PNG</span>
+            </div>
+          </div>
+        </section>
       </div>
-    </StepLayout>
+    </WizardLayout>
   )
 }
