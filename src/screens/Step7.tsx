@@ -27,7 +27,8 @@ export default function Step7() {
 
   async function handlePublish() {
     setStatus('publishing')
-    const shouldFail = data.serviceName.trim().toLowerCase() === 'fail' && !hasFailedRef.current
+    const shouldFail =
+      import.meta.env.DEV && data.serviceName.trim().toLowerCase() === 'fail' && !hasFailedRef.current
     try {
       await simulateAsyncLoad(600, shouldFail)
       setStatus('success')
