@@ -1,6 +1,14 @@
 import { useId } from 'react'
 import { Clock } from '@phosphor-icons/react'
-import { formatMinutes, intervalMinutes, minutesToTimeValue, parseTimeToMinutes } from '../lib/slots'
+import {
+  formatMinutes,
+  intervalMinutes,
+  isBlocked,
+  minutesToTimeValue,
+  nextBlockedStart,
+  parseTimeToMinutes,
+  type Window,
+} from '../lib/slots'
 
 const MINUTES_IN_DAY = 24 * 60
 
@@ -19,6 +27,7 @@ export function TimeSelect({
   after,
   min,
   max,
+  blocked = [],
   disabled,
 }: {
   label: string
@@ -30,6 +39,8 @@ export function TimeSelect({
   /** Inclusive bounds, used to hold a price rule inside the bookable hours. */
   min?: string
   max?: string
+  /** Minute ranges already claimed by another rule, hidden so windows can't collide. */
+  blocked?: Window[]
   disabled?: boolean
 }) {
   const id = useId()
@@ -38,11 +49,17 @@ export function TimeSelect({
   const lower = min ? parseTimeToMinutes(min) : null
   const upper = max ? parseTimeToMinutes(max) : null
 
+  // An end time may not jump over a claimed block, so stop at the next one after the start.
+  const ceiling =
+    floor !== null && blocked.length ? nextBlockedStart(blocked, floor) : null
+
   const options: { value: string; label: string }[] = []
   for (let t = 0; t < MINUTES_IN_DAY; t += step) {
     if (floor !== null && t <= floor) continue
     if (lower !== null && t < lower) continue
     if (upper !== null && t > upper) continue
+    if (ceiling !== null && t > ceiling) continue
+    if (isBlocked(blocked, t)) continue
     options.push({ value: minutesToTimeValue(t), label: formatMinutes(t) })
   }
 

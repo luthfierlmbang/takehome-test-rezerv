@@ -7,8 +7,8 @@ import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
 import { PricePreview } from '../components/PricePreview'
 import { TimeSelect } from '../components/TimeSelect'
-import { useBooking } from '../context/BookingContext'
-import { clampToWindow, snapToInterval } from '../lib/slots'
+import { useBooking, type PriceRule } from '../context/BookingContext'
+import { clampToWindow, dayScopesOverlap, parseTimeToMinutes, snapToInterval, type Window } from '../lib/slots'
 
 const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
 
@@ -21,14 +21,14 @@ function toAmount(raw: string): string {
 
 export default function Step5() {
   const navigate = useNavigate()
-  const { data, updateField } = useBooking()
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const { data, updateField, addPriceRule, updatePriceRule, removePriceRule } = useBooking()
+  const [openPreviewId, setOpenPreviewId] = useState<string | null>(null)
 
   const scheduleReady = Boolean(data.slotInterval && data.bookableFrom && data.bookableUntil)
 
   /**
    * The Schedule step owns the grid, so when it changes a rule set earlier can fall off
-   * it — 13:15 under a 30-minute interval, or 8am once the day starts at 9am. Pull the
+   * it — 13:15 under a 30-minute interval, or 8am once the day starts at 9am. Pull every
    * stored window back onto the grid rather than letting it price slots that don't exist.
    */
   useEffect(() => {
@@ -39,22 +39,60 @@ export default function Step5() {
       return clampToWindow(snapToInterval(value, data.slotInterval), data.bookableFrom, data.bookableUntil)
     }
 
-    const from = reconcile(data.ruleFrom)
-    const to = reconcile(data.ruleTo)
-    if (from !== data.ruleFrom) updateField('ruleFrom', from)
-    // A window that collapsed to zero length no longer describes anything.
-    if (to !== data.ruleTo || (from && to && to <= from)) {
-      updateField('ruleTo', to > from ? to : '')
+    for (const rule of data.priceRules) {
+      const from = reconcile(rule.from)
+      const to = reconcile(rule.to)
+      if (from !== rule.from) updatePriceRule(rule.id, 'from', from)
+      // A window that collapsed to zero length no longer describes anything.
+      if (to !== rule.to || (from && to && to <= from)) {
+        updatePriceRule(rule.id, 'to', to > from ? to : '')
+      }
     }
     // Deliberately keyed to the schedule only: re-running on every rule edit would fight the user.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.slotInterval, data.bookableFrom, data.bookableUntil, scheduleReady])
 
-  function handleRuleFromChange(value: string) {
-    updateField('ruleFrom', value)
+  function handleRuleFromChange(id: string, value: string) {
+    const rule = data.priceRules.find((r) => r.id === id)
+    updatePriceRule(id, 'from', value)
     // An end at or before the new start can no longer stand.
-    if (data.ruleTo && data.ruleTo <= value) updateField('ruleTo', '')
+    if (rule?.to && rule.to <= value) updatePriceRule(id, 'to', '')
   }
+
+  /**
+   * Hours already claimed by another rule that can fall on the same day. Two Weekdays
+   * rules may coexist at different hours, but never over the same hour; Weekdays and
+   * Weekends never collide; "Every day" collides with both.
+   */
+  /**
+   * Widening a rule's days can drag it onto hours another rule already owns, so drop a
+   * window that would now collide rather than leaving two rules fighting over a slot.
+   */
+  function handleAppliesOnChange(rule: PriceRule, appliesOn: string) {
+    updatePriceRule(rule.id, 'appliesOn', appliesOn)
+
+    const claimed = claimedHoursFor({ ...rule, appliesOn })
+    const start = parseTimeToMinutes(rule.from)
+    const end = parseTimeToMinutes(rule.to)
+    if (start === null || end === null) return
+
+    const collides = claimed.some((w) => start < w.end && end > w.start)
+    if (collides) {
+      updatePriceRule(rule.id, 'from', '')
+      updatePriceRule(rule.id, 'to', '')
+    }
+  }
+
+  function claimedHoursFor(rule: PriceRule): Window[] {
+    return data.priceRules
+      .filter((other) => other.id !== rule.id && dayScopesOverlap(other.appliesOn, rule.appliesOn))
+      .map((other) => ({
+        start: parseTimeToMinutes(other.from),
+        end: parseTimeToMinutes(other.to),
+      }))
+      .filter((w): w is Window => w.start !== null && w.end !== null && w.end > w.start)
+  }
+
 
   return (
     <WizardLayout stepIndex={3} onBack={() => navigate('/step-4')} onNext={() => navigate('/step-6')}>
@@ -96,89 +134,108 @@ export default function Step5() {
             </p>
           </div>
 
-          <div className="rounded-lg border border-brand-border px-4 py-3">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <span className="text-base font-medium leading-[26px] text-black">Rules 1</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="flex h-8 items-center gap-1 rounded-lg border border-[#F1441E] px-3 text-xs font-semibold text-[#F1441E] transition-colors hover:bg-[#FEF3F2]"
-                  >
-                    <Trash size={16} />
-                    Remove
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewOpen((open) => !open)}
-                    aria-expanded={previewOpen}
-                    aria-controls="rule-price-preview"
-                    className="flex h-8 min-w-[130px] items-center justify-center gap-1 rounded-lg bg-brand-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0d4750]"
-                  >
-                    {previewOpen ? <EyeSlash size={16} /> : <Eye size={16} />}
-                    {previewOpen ? 'Hide preview' : 'Preview'}
-                  </button>
-                </div>
-              </div>
+          {data.priceRules.length === 0 && (
+            <p className="rounded-lg border border-dashed border-brand-border px-4 py-6 text-center text-sm text-brand-textMuted">
+              No price rules yet — every slot uses the base price.
+            </p>
+          )}
 
-              <div className="h-px w-full bg-brand-border" />
-
-              <div className="grid grid-cols-4 gap-4">
-                <Select
-                  label="Applies on"
-                  value={data.ruleAppliesOn}
-                  onChange={(v) => updateField('ruleAppliesOn', v)}
-                  options={APPLIES_ON}
-                />
-                {/* A rule can only cover slots that exist, so it rides the same grid and
-                    stays inside the bookable hours set on the Schedule step. */}
-                <TimeSelect
-                  label="Bookable from"
-                  value={data.ruleFrom}
-                  onChange={handleRuleFromChange}
-                  interval={data.slotInterval}
-                  min={data.bookableFrom}
-                  max={data.bookableUntil}
-                  disabled={!scheduleReady}
-                />
-                <TimeSelect
-                  label="To"
-                  value={data.ruleTo}
-                  onChange={(v) => updateField('ruleTo', v)}
-                  interval={data.slotInterval}
-                  after={data.ruleFrom}
-                  max={data.bookableUntil}
-                  disabled={!scheduleReady}
-                />
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="rule-price" className="text-base leading-[26px] text-black">
-                    Price
-                  </label>
-                  <div className="flex h-9 items-center gap-1 rounded-lg border border-brand-border px-3 text-sm">
-                    <span className="text-brand-textMuted">$</span>
-                    <input
-                      id="rule-price"
-                      inputMode="decimal"
-                      value={data.rulePrice}
-                      onChange={(e) => updateField('rulePrice', toAmount(e.target.value))}
-                      className="w-full text-black outline-none"
-                    />
+          {data.priceRules.map((rule, index) => {
+            const previewOpen = openPreviewId === rule.id
+            const priceId = `${rule.id}-price`
+            const claimed = claimedHoursFor(rule)
+            return (
+              <div key={rule.id} className="rounded-lg border border-brand-border px-4 py-3">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-medium leading-[26px] text-black">Rules {index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => removePriceRule(rule.id)}
+                        aria-label={`Remove rule ${index + 1}`}
+                        className="flex h-8 items-center gap-1 rounded-lg border border-[#F1441E] px-3 text-xs font-semibold text-[#F1441E] transition-colors hover:bg-[#FEF3F2]"
+                      >
+                        <Trash size={16} />
+                        Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOpenPreviewId(previewOpen ? null : rule.id)}
+                        aria-expanded={previewOpen}
+                        aria-label={previewOpen ? `Hide preview for rule ${index + 1}` : `Preview rule ${index + 1}`}
+                        className="flex h-8 min-w-[130px] items-center justify-center gap-1 rounded-lg bg-brand-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0d4750]"
+                      >
+                        {previewOpen ? <EyeSlash size={16} /> : <Eye size={16} />}
+                        {previewOpen ? 'Hide preview' : 'Preview'}
+                      </button>
+                    </div>
                   </div>
+
+                  <div className="h-px w-full bg-brand-border" />
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <Select
+                      label="Applies on"
+                      value={rule.appliesOn}
+                      onChange={(v) => handleAppliesOnChange(rule, v)}
+                      options={APPLIES_ON}
+                    />
+                    {/* A rule can only cover slots that exist, so it rides the same grid and
+                        stays inside the bookable hours set on the Schedule step. `blocked`
+                        additionally hides hours another same-day rule already claims. */}
+                    <TimeSelect
+                      label="Bookable from"
+                      value={rule.from}
+                      onChange={(v) => handleRuleFromChange(rule.id, v)}
+                      interval={data.slotInterval}
+                      min={data.bookableFrom}
+                      max={data.bookableUntil}
+                      blocked={claimed}
+                      disabled={!scheduleReady}
+                    />
+                    <TimeSelect
+                      label="To"
+                      value={rule.to}
+                      onChange={(v) => updatePriceRule(rule.id, 'to', v)}
+                      interval={data.slotInterval}
+                      after={rule.from}
+                      max={data.bookableUntil}
+                      blocked={claimed}
+                      disabled={!scheduleReady}
+                    />
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor={priceId} className="text-base leading-[26px] text-black">
+                        Price
+                      </label>
+                      <div className="flex h-9 items-center gap-1 rounded-lg border border-brand-border px-3 text-sm">
+                        <span className="text-brand-textMuted">$</span>
+                        <input
+                          id={priceId}
+                          inputMode="decimal"
+                          value={rule.price}
+                          onChange={(e) => updatePriceRule(rule.id, 'price', toAmount(e.target.value))}
+                          className="w-full text-black outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {!scheduleReady && (
+                    <p className="text-xs text-brand-textMuted">
+                      Set the slot interval and bookable hours on the Schedule step to add a time-based rule.
+                    </p>
+                  )}
+
+                  {previewOpen && <PricePreview data={data} ruleId={rule.id} />}
                 </div>
               </div>
-
-              {!scheduleReady && (
-                <p className="text-xs text-brand-textMuted">
-                  Set the slot interval and bookable hours on the Schedule step to add a time-based rule.
-                </p>
-              )}
-
-              <div id="rule-price-preview">{previewOpen && <PricePreview data={data} />}</div>
-            </div>
-          </div>
+            )
+          })}
 
           <button
             type="button"
+            onClick={addPriceRule}
             className="flex h-9 items-center justify-center gap-2 rounded-lg border border-brand-border text-sm font-medium text-black transition-colors hover:bg-brand-surfaceMuted"
           >
             <Plus size={16} />

@@ -1,5 +1,14 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
+/** One time-based price rule. Later rules win where windows overlap. */
+export type PriceRule = {
+  id: string
+  appliesOn: string
+  from: string
+  to: string
+  price: string
+}
+
 export type BookingData = {
   serviceType: string
   serviceName: string
@@ -13,12 +22,16 @@ export type BookingData = {
   bookableUntil: string
   slotInterval: string
   basePrice: string
-  ruleAppliesOn: string
-  ruleFrom: string
-  ruleTo: string
-  rulePrice: string
+  priceRules: PriceRule[]
   paymentDropIn: boolean
   paymentClassPack: boolean
+}
+
+/** Ids only need to be unique within a draft, and must not depend on Date/Math.random. */
+let ruleSequence = 0
+export function createPriceRule(): PriceRule {
+  ruleSequence += 1
+  return { id: `rule-${ruleSequence}`, appliesOn: 'Weekdays', from: '', to: '', price: '' }
 }
 
 const INITIAL_DATA: BookingData = {
@@ -35,10 +48,7 @@ const INITIAL_DATA: BookingData = {
   slotInterval: '',
   // Pricing arrives pre-filled, matching the values the Figma Pricing screen shows.
   basePrice: '20',
-  ruleAppliesOn: 'Weekdays',
-  ruleFrom: '13:00',
-  ruleTo: '14:00',
-  rulePrice: '14.00',
+  priceRules: [{ id: 'rule-0', appliesOn: 'Weekdays', from: '13:00', to: '14:00', price: '14.00' }],
   paymentDropIn: false,
   paymentClassPack: false,
 }
@@ -46,6 +56,9 @@ const INITIAL_DATA: BookingData = {
 type BookingContextValue = {
   data: BookingData
   updateField: <K extends keyof BookingData>(key: K, value: BookingData[K]) => void
+  addPriceRule: () => void
+  updatePriceRule: <K extends keyof PriceRule>(id: string, key: K, value: PriceRule[K]) => void
+  removePriceRule: (id: string) => void
   currentStepIndex: number
   goToStep: (index: number) => void
   /** Services that have been published — drives the Service screen's filled state. */
@@ -74,6 +87,21 @@ export function BookingProvider({
     setData((prev) => ({ ...prev, [key]: value }))
   }
 
+  function addPriceRule() {
+    setData((prev) => ({ ...prev, priceRules: [...prev.priceRules, createPriceRule()] }))
+  }
+
+  function updatePriceRule<K extends keyof PriceRule>(id: string, key: K, value: PriceRule[K]) {
+    setData((prev) => ({
+      ...prev,
+      priceRules: prev.priceRules.map((rule) => (rule.id === id ? { ...rule, [key]: value } : rule)),
+    }))
+  }
+
+  function removePriceRule(id: string) {
+    setData((prev) => ({ ...prev, priceRules: prev.priceRules.filter((rule) => rule.id !== id) }))
+  }
+
   function goToStep(index: number) {
     setCurrentStepIndex(index)
   }
@@ -85,7 +113,17 @@ export function BookingProvider({
 
   return (
     <BookingContext.Provider
-      value={{ data, updateField, currentStepIndex, goToStep, publishedServices, publishService }}
+      value={{
+        data,
+        updateField,
+        addPriceRule,
+        updatePriceRule,
+        removePriceRule,
+        currentStepIndex,
+        goToStep,
+        publishedServices,
+        publishService,
+      }}
     >
       {children}
     </BookingContext.Provider>

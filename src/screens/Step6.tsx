@@ -6,6 +6,14 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { useBooking, type BookingData } from '../context/BookingContext'
 import { simulateAsyncLoad } from '../lib/simulateAsyncLoad'
 
+/** Only rules with a usable window and price actually change what a customer pays. */
+function summarizePricing(data: BookingData): string {
+  if (!data.basePrice) return '—'
+  const active = data.priceRules.filter((r) => r.from && r.to && r.price).length
+  if (active === 0) return `Base $${data.basePrice}`
+  return `Base $${data.basePrice} + ${active} time rule${active > 1 ? 's' : ''}`
+}
+
 function summarize(data: BookingData) {
   return {
     Service: data.serviceName || '—',
@@ -13,7 +21,7 @@ function summarize(data: BookingData) {
     Coaches: data.selectedCoaches.length ? data.selectedCoaches.join(', ') : '—',
     Durations: data.selectedDurations.length ? data.selectedDurations.join(' / ') : '—',
     'Start times': data.bookableFrom && data.bookableUntil ? `${data.bookableFrom} – ${data.bookableUntil}` : '—',
-    Pricing: data.basePrice ? `Base $${data.basePrice}${data.rulePrice ? ' + 1 time rule' : ''}` : '—',
+    Pricing: summarizePricing(data),
     Payment:
       [data.paymentDropIn && 'Drop-in', data.paymentClassPack && 'Class pack'].filter(Boolean).join(' · ') || '—',
   }

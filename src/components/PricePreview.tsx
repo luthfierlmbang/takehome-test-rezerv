@@ -4,24 +4,28 @@ import { buildDayPreview } from '../lib/slots'
 import type { BookingData } from '../context/BookingContext'
 
 /**
- * Shows the operator the customer-facing result of a time-based rule: every start time
- * for the day with the price it would actually charge, with ruled slots called out.
+ * Shows the operator the customer-facing result of the price rules: every start time for
+ * the day with the price it would actually charge.
+ *
+ * Prices reflect *all* rules, so the number shown is the real one, but only the slots
+ * owned by `ruleId` are filled — otherwise a later rule stealing hours from this one
+ * would be invisible.
  *
  * Revealed by the rule card's existing "Preview" button rather than a separate accordion
  * control, so the design's own affordance does the work.
  */
-export function PricePreview({ data }: { data: BookingData }) {
+export function PricePreview({ data, ruleId }: { data: BookingData; ruleId: string }) {
   const slots = buildDayPreview({
     from: data.bookableFrom,
     until: data.bookableUntil,
     interval: data.slotInterval,
     basePrice: data.basePrice,
-    ruleFrom: data.ruleFrom,
-    ruleTo: data.ruleTo,
-    rulePrice: data.rulePrice,
+    rules: data.priceRules,
   })
 
-  const ruledCount = slots.filter((s) => s.ruled).length
+  const rule = data.priceRules.find((r) => r.id === ruleId)
+  const ownedCount = slots.filter((s) => s.ruledBy === ruleId).length
+  const takenCount = slots.filter((s) => s.ruledBy !== null && s.ruledBy !== ruleId).length
 
   return (
     <motion.div
@@ -40,38 +44,44 @@ export function PricePreview({ data }: { data: BookingData }) {
           <div className="flex flex-col gap-3">
             <p className="text-sm text-black">
               What a customer sees on{' '}
-              <span className="font-medium">{data.ruleAppliesOn ? data.ruleAppliesOn.toLowerCase() : 'these days'}</span>
-              {ruledCount > 0 && (
-                <>
-                  {' '}
-                  — <span className="font-medium">{ruledCount}</span> of {slots.length} slots use the rule price
-                </>
-              )}
+              <span className="font-medium">{rule?.appliesOn ? rule.appliesOn.toLowerCase() : 'these days'}</span>
+              {' — '}
+              <span className="font-medium">{ownedCount}</span> of {slots.length} slots use this rule
             </p>
 
             <div className="flex flex-wrap gap-2">
-              {slots.map((slot) => (
-                <span
-                  key={slot.time}
-                  className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs ${
-                    slot.ruled
-                      ? 'bg-brand-primary text-white'
-                      : 'border border-brand-border bg-white text-brand-textMuted'
-                  }`}
-                >
-                  {slot.time}
-                  <span className={slot.ruled ? 'font-semibold' : 'font-medium text-black'}>
-                    ${slot.price || '—'}
+              {slots.map((slot) => {
+                const isOwn = slot.ruledBy === ruleId
+                const isOther = slot.ruledBy !== null && !isOwn
+                return (
+                  <span
+                    key={slot.time}
+                    className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs ${
+                      isOwn
+                        ? 'bg-brand-primary text-white'
+                        : isOther
+                          ? 'border border-brand-primary/40 bg-white text-brand-textMuted'
+                          : 'border border-brand-border bg-white text-brand-textMuted'
+                    }`}
+                  >
+                    {slot.time}
+                    <span className={isOwn ? 'font-semibold' : 'font-medium text-black'}>${slot.price || '—'}</span>
                   </span>
-                </span>
-              ))}
+                )
+              })}
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-brand-textMuted">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-brand-textMuted">
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-brand-primary" />
-                Rule price
+                This rule
               </span>
+              {takenCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full border border-brand-primary/40 bg-white" />
+                  Another rule ({takenCount})
+                </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full border border-brand-border bg-white" />
                 Base price

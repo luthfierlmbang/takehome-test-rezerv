@@ -31,9 +31,7 @@ test('Preview reveals the per-slot prices a customer would see, and hides again'
     bookableFrom: '12:00',
     bookableUntil: '15:00',
     basePrice: '20',
-    ruleFrom: '13:00',
-    ruleTo: '14:00',
-    rulePrice: '14.00',
+    priceRules: [{ id: 'r1', appliesOn: 'Weekdays', from: '13:00', to: '14:00', price: '14.00' }],
   })
 
   const preview = await waitFor(() => screen.getByRole('button', { name: /Preview/ }))
@@ -43,7 +41,7 @@ test('Preview reveals the per-slot prices a customer would see, and hides again'
 
   const panel = screen.getByText(/What a customer sees on/).closest('div') as HTMLElement
   // The summary text is split across spans, so assert on the panel's flattened text.
-  expect(panel.textContent).toMatch(/1 of 3 slots use the rule price/)
+  expect(panel.textContent).toMatch(/1 of 3 slots use this rule/)
 
   // Scoped to the panel: these times also exist as <option>s in the rule's time selects.
   // 1pm falls inside the rule window, so it carries the rule price rather than the base.
@@ -95,8 +93,7 @@ test('pulls a rule window back onto the grid when the schedule narrows it', asyn
     slotInterval: 'Every Hour',
     bookableFrom: '09:00',
     bookableUntil: '12:00',
-    ruleFrom: '13:15',
-    ruleTo: '14:00',
+    priceRules: [{ id: 'r1', appliesOn: 'Weekdays', from: '13:15', to: '14:00', price: '14.00' }],
   })
 
   await waitFor(() => expect(screen.getByLabelText('Bookable from')).toHaveValue('12:00'))
@@ -110,4 +107,65 @@ test('price fields keep only digits and a single decimal point', async () => {
   const base = await waitFor(() => screen.getByLabelText(/Base price applies/))
   await userEvent.type(base, '2a5.x9')
   expect(base).toHaveValue('25.9')
+})
+
+const SCHEDULE = { slotInterval: 'Every Hour', bookableFrom: '09:00', bookableUntil: '17:00' }
+
+test('Add price rule appends a rule, and Remove takes it away', async () => {
+  renderStep5({ ...SCHEDULE, priceRules: [] })
+
+  await waitFor(() => expect(screen.getByText(/No price rules yet/)).toBeInTheDocument())
+
+  await userEvent.click(screen.getByRole('button', { name: /Add price rule/ }))
+  expect(screen.getByText('Rules 1')).toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: /Add price rule/ }))
+  expect(screen.getByText('Rules 2')).toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Remove rule 1' }))
+  // The survivor renumbers rather than leaving a gap.
+  expect(screen.getByText('Rules 1')).toBeInTheDocument()
+  expect(screen.queryByText('Rules 2')).not.toBeInTheDocument()
+})
+
+test('a second same-day rule cannot claim hours the first already owns', async () => {
+  renderStep5({
+    ...SCHEDULE,
+    priceRules: [
+      { id: 'r1', appliesOn: 'Weekdays', from: '13:00', to: '15:00', price: '30' },
+      { id: 'r2', appliesOn: 'Weekdays', from: '', to: '', price: '' },
+    ],
+  })
+
+  await waitFor(() => screen.getByText('Rules 2'))
+
+  const options = within(screen.getAllByLabelText('Bookable from')[1])
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+
+  // 13:00-15:00 belongs to rule 1, so those starts are gone from rule 2.
+  expect(options).not.toContain('1pm')
+  expect(options).not.toContain('2pm')
+  expect(options).toContain('12pm')
+  expect(options).toContain('3pm')
+})
+
+test('a weekend rule is free to use hours a weekday rule owns', async () => {
+  renderStep5({
+    ...SCHEDULE,
+    priceRules: [
+      { id: 'r1', appliesOn: 'Weekdays', from: '13:00', to: '15:00', price: '30' },
+      { id: 'r2', appliesOn: 'Weekends', from: '', to: '', price: '' },
+    ],
+  })
+
+  await waitFor(() => screen.getByText('Rules 2'))
+
+  const options = within(screen.getAllByLabelText('Bookable from')[1])
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+
+  // Different days never collide, so nothing is withheld.
+  expect(options).toContain('1pm')
+  expect(options).toContain('2pm')
 })
