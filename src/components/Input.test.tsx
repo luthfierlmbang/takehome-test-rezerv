@@ -20,6 +20,20 @@ test('shows error message and error border class when error is set', () => {
   expect(screen.getByLabelText('Service name')).toHaveClass('border-red-500')
 })
 
+test('marks the field aria-invalid and describes it by the error when error is set', () => {
+  render(<Input label="Service name" value="" onChange={() => {}} error="Required" />)
+  const input = screen.getByLabelText('Service name')
+  expect(input).toHaveAttribute('aria-invalid', 'true')
+  expect(input).toHaveAttribute('aria-describedby', screen.getByText('Required').id)
+})
+
+test('does not mark the field invalid when there is no error', () => {
+  render(<Input label="Service name" value="" onChange={() => {}} />)
+  const input = screen.getByLabelText('Service name')
+  expect(input).toHaveAttribute('aria-invalid', 'false')
+  expect(input).not.toHaveAttribute('aria-describedby')
+})
+
 test('disables the field when disabled', () => {
   render(<Input label="Service name" value="" onChange={() => {}} disabled />)
   expect(screen.getByLabelText('Service name')).toBeDisabled()

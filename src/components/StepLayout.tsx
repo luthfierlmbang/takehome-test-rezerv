@@ -53,9 +53,13 @@ export function StepLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-white">
       <Navbar activeItem="Services" items={NAV_ITEMS} />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 flex-col overflow-hidden">
         <PageHeader title={title} description={description} />
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 py-6">
+        <div
+          data-testid="step-content-region"
+          aria-busy={loading}
+          className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 py-6"
+        >
           <Breadcrumb items={['Services', title]} />
           <Stepper steps={STEP_LABELS} currentIndex={stepIndex} />
           <AnimatePresence mode="wait">
@@ -86,7 +90,7 @@ export function StepLayout({
             backDisabled={backDisabled}
           />
         </div>
-      </div>
+      </main>
     </div>
   )
 }

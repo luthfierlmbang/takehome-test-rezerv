@@ -16,11 +16,17 @@ const STATE_CLASSES: Record<StepState, string> = {
 
 export function Stepper({ steps, currentIndex }: { steps: string[]; currentIndex: number }) {
   return (
-    <ol className="flex w-full items-center gap-2">
+    <ol aria-label="Steps" className="flex w-full items-center gap-2">
       {steps.map((step, i) => {
         const state = stateFor(i, currentIndex)
         return (
-          <li key={step} data-testid={`step-${i}`} data-state={state} className="flex flex-1 flex-col items-center gap-1">
+          <li
+            key={step}
+            data-testid={`step-${i}`}
+            data-state={state}
+            aria-current={state === 'current' ? 'step' : undefined}
+            className="flex flex-1 flex-col items-center gap-1"
+          >
             <motion.span
               layout
               transition={{ duration: 0.25 }}
