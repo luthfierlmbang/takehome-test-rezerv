@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle, DotsThree, MapPin, Plus } from '@phosphor-icons/react'
+import { DotsThree, MapPin, Plus } from '@phosphor-icons/react'
 import { AppShell } from '../components/AppShell'
 import { Button } from '../components/Button'
+import { Toast } from '../components/Toast'
 import { useBooking, type BookingData } from '../context/BookingContext'
 import heroUrl from '../assets/hero-illustration.png'
 import padelCourtUrl from '../assets/padel-court.png'
@@ -46,18 +47,7 @@ export default function Step1() {
   return (
     <AppShell title="Service">
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-6 pl-[15px] pr-6 pt-6">
-        {justPublished && (
-          <motion.div
-            role="status"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="flex items-center gap-2 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-4 py-3 text-sm text-brand-primary"
-          >
-            <CheckCircle size={18} weight="fill" />
-            Service published — customers can book it now.
-          </motion.div>
-        )}
+        {justPublished && <Toast message="Service published — customers can book it now." />}
 
         <div className="flex items-center justify-between">
           <span className="text-base font-medium leading-[26px] text-black">

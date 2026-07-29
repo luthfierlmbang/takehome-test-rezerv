@@ -33,11 +33,12 @@ const INITIAL_DATA: BookingData = {
   bookableFrom: '',
   bookableUntil: '',
   slotInterval: '',
-  basePrice: '',
-  ruleAppliesOn: '',
-  ruleFrom: '',
-  ruleTo: '',
-  rulePrice: '',
+  // Pricing arrives pre-filled, matching the values the Figma Pricing screen shows.
+  basePrice: '20',
+  ruleAppliesOn: 'Weekdays',
+  ruleFrom: '13:00',
+  ruleTo: '14:00',
+  rulePrice: '14.00',
   paymentDropIn: false,
   paymentClassPack: false,
 }

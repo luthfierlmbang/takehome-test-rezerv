@@ -7,10 +7,9 @@ test('renders the app shell', () => {
   expect(screen.getByTestId('app-shell')).toBeInTheDocument()
 })
 
-// Each route change runs a page-transition exit/enter (AnimatePresence) on top of
-// WizardLayout's own skeleton-loading delay. Every wait below targets text/labels/testids
-// that only exist on the screen we're navigating *to*, so a click can never land on the
-// wrong screen's control.
+// Each screen sits behind WizardLayout's skeleton-loading delay. Every wait below targets
+// text/labels/testids that only exist on the screen we're navigating *to*, so a click can
+// never land on the wrong screen's control.
 const TRANSITION_TIMEOUT = 3000
 
 test(

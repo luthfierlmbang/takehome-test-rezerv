@@ -6,6 +6,8 @@ import { CheckboxChip } from '../components/CheckboxChip'
 import { useBooking } from '../context/BookingContext'
 
 const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
+/** A long range can generate dozens of slots; cap the preview so it stays one tidy row. */
+const MAX_VISIBLE_TIMES = 12
 const INTERVALS = ['Every 15 Min', 'Every 30 Min', 'Every Hour']
 
 function parseTimeToMinutes(value: string): number | null {
@@ -88,7 +90,7 @@ export default function Step5() {
                 type="time"
                 value={data.bookableFrom}
                 onChange={(e) => updateField('bookableFrom', e.target.value)}
-                className="rounded-sm border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -100,7 +102,7 @@ export default function Step5() {
                 type="time"
                 value={data.bookableUntil}
                 onChange={(e) => updateField('bookableUntil', e.target.value)}
-                className="rounded-sm border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                className="rounded-lg border border-brand-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
             </div>
             <Select
@@ -117,12 +119,17 @@ export default function Step5() {
                 Customers can start every <span className="font-medium text-black">{data.slotInterval}</span>. With these
                 settings, a day shows these start times:
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {startTimes.map((time) => (
-                  <span key={time} className="rounded-sm bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {startTimes.slice(0, MAX_VISIBLE_TIMES).map((time) => (
+                  <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
                     {time}
                   </span>
                 ))}
+                {startTimes.length > MAX_VISIBLE_TIMES && (
+                  <span className="text-xs text-brand-textMuted">
+                    +{startTimes.length - MAX_VISIBLE_TIMES} more
+                  </span>
+                )}
               </div>
             </div>
           )}
