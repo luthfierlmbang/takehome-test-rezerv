@@ -54,7 +54,7 @@ export function WizardLayout({
       <div
         data-testid="step-content-region"
         aria-busy={loading}
-        className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-6"
+        className="flex flex-1 flex-col gap-6 overflow-y-auto pb-6 pl-[15px] pr-6 pt-6"
       >
         <Breadcrumb items={['Home', 'Create Service']} />
         <Stepper steps={STEP_LABELS} currentIndex={stepIndex} />
@@ -75,7 +75,7 @@ export function WizardLayout({
           </motion.div>
         )}
       </div>
-      <div className="shrink-0 px-6 pb-6">
+      <div className="shrink-0 pb-6 pl-[15px] pr-6">
         <div className="flex h-16 items-center justify-end gap-4 rounded-2xl border border-brand-border bg-white px-4">
           <Button variant="secondary" onClick={onBack} disabled={backDisabled || !onBack}>
             {backLabel !== 'Cancel' && <ArrowLeft size={16} />}

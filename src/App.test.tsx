@@ -44,11 +44,13 @@ test(
     expect(screen.getByText('Personal Training')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Publish Service' }))
 
+    // Publishing returns to the Service screen, now in its filled state.
     await waitFor(() => expect(screen.getByText(/service published/i)).toBeInTheDocument(), {
       timeout: TRANSITION_TIMEOUT,
     })
-    // Confirms the success panel also interpolates the persisted service name.
-    expect(screen.getByText(/Personal Training/)).toBeInTheDocument()
+    expect(screen.getByText('1 service')).toBeInTheDocument()
+    // The published service carries the name entered back on step 2.
+    expect(screen.getByText('Personal Training')).toBeInTheDocument()
   },
   15000,
 )

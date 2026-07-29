@@ -20,15 +20,16 @@ export default function Step3() {
       onBack={() => navigate('/step-2')}
       onNext={() => navigate('/step-4')}
     >
-      <div className="flex gap-4">
+      <div className="flex items-start gap-4">
         <section className="flex-1 rounded-2xl border border-brand-border p-6">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4">
               <h2 className="text-2xl font-medium leading-[31px] text-black">Basic details</h2>
               <p className="text-base leading-[26px] text-brand-textMuted">
                 Add the essentials first. You'll set up locations, coaches, availability, and pricing next.
               </p>
             </div>
+            <div className="flex flex-col gap-4">
             <Select
               label="Service Type"
               value={data.serviceType}
@@ -44,17 +45,17 @@ export default function Step3() {
               options={BOOKING_CATEGORIES}
               placeholder="Select a category"
             />
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="description" className="text-sm font-medium text-black">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="description" className="text-base leading-[26px] text-black">
                 Description
               </label>
               <textarea
                 id="description"
                 value={data.serviceDescription}
                 onChange={(e) => updateField('serviceDescription', e.target.value)}
-                rows={3}
-                className="rounded-lg border border-brand-border px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
+                className="h-[122px] resize-none rounded-lg border border-brand-border px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
+            </div>
             </div>
           </div>
         </section>

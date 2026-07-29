@@ -64,7 +64,7 @@ export function ImageUploader({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15 }}
-        className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-brand-primary py-12 text-center"
+        className="flex h-[284px] flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-brand-primary text-center"
       >
         <motion.img
           src={uploadFolderUrl}
@@ -148,7 +148,7 @@ export function ImageUploader({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
-      className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-brand-border py-12 text-center"
+      className="flex h-[284px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-brand-border text-center"
     >
       <motion.img
         src={uploadFolderUrl}

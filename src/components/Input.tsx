@@ -9,13 +9,14 @@ type InputProps = {
   placeholder?: string
 }
 
+/** Metrics match the Figma "Input/Text Fields" component: 16px label, 8px gap, 36px field. */
 export function Input({ label, value, onChange, error, disabled, placeholder }: InputProps) {
   const id = useId()
   const errorId = `${id}-error`
 
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium text-black">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-base leading-[26px] text-black">
         {label}
       </label>
       <input
@@ -26,7 +27,7 @@ export function Input({ label, value, onChange, error, disabled, placeholder }: 
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={error ? errorId : undefined}
-        className={`rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/40 disabled:bg-brand-surfaceMuted disabled:text-brand-textMuted ${
+        className={`h-9 rounded-lg border px-3 text-sm text-black transition-colors placeholder:text-[#A1A1AA] focus:outline-none focus:ring-2 focus:ring-brand-primary/40 disabled:bg-brand-surfaceMuted disabled:text-brand-textMuted ${
           error ? 'border-red-500' : 'border-brand-border focus:border-brand-primary'
         }`}
       />

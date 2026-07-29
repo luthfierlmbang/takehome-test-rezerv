@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { WizardLayout } from '../components/WizardLayout'
 import { Card } from '../components/Card'
 import { ErrorBanner } from '../components/ErrorBanner'
@@ -22,8 +21,8 @@ function summarize(data: BookingData) {
 
 export default function Step7() {
   const navigate = useNavigate()
-  const { data } = useBooking()
-  const [status, setStatus] = useState<'idle' | 'publishing' | 'error' | 'success'>('idle')
+  const { data, publishService } = useBooking()
+  const [status, setStatus] = useState<'idle' | 'publishing' | 'error'>('idle')
   // Deterministic, testable trigger for the failure path (no Math.random): typing the
   // "fail" sentinel into the service name simulates a publish error on the first attempt
   // only, so retrying (without touching the sentinel) demonstrates the recovery path.
@@ -35,26 +34,14 @@ export default function Step7() {
       import.meta.env.DEV && data.serviceName.trim().toLowerCase() === 'fail' && !hasFailedRef.current
     try {
       await simulateAsyncLoad(600, shouldFail)
-      setStatus('success')
+      // The published service becomes the Service screen's filled state, so land the
+      // user back there rather than on a dead-end confirmation panel.
+      publishService()
+      navigate('/step-1', { state: { justPublished: true } })
     } catch {
       hasFailedRef.current = true
       setStatus('error')
     }
-  }
-
-  if (status === 'success') {
-    return (
-      <WizardLayout stepIndex={4} onNext={() => {}} backDisabled>
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
-          <Card>
-            <div className="flex flex-col items-center gap-2 py-8 text-center">
-              <span className="text-lg font-medium text-black">Service published</span>
-              <p className="text-sm text-brand-textMuted">Customers can now book "{data.serviceName || 'this service'}".</p>
-            </div>
-          </Card>
-        </motion.div>
-      </WizardLayout>
-    )
   }
 
   const summary = summarize(data)

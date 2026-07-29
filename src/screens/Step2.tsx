@@ -31,15 +31,16 @@ export default function Step2() {
       onBack={() => navigate('/step-1')}
       onNext={handleNext}
     >
-      <div className="flex gap-4">
+      <div className="flex items-start gap-4">
         <section className="flex-1 rounded-2xl border border-brand-border p-6">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4">
               <h2 className="text-2xl font-medium leading-[31px] text-black">Basic details</h2>
               <p className="text-base leading-[26px] text-brand-textMuted">
                 Add the essentials first. You'll set up locations, coaches, availability, and pricing next.
               </p>
             </div>
+            <div className="flex flex-col gap-4">
             <Select
               label="Service Type"
               value={data.serviceType}
@@ -61,8 +62,8 @@ export default function Step2() {
               options={BOOKING_CATEGORIES}
               placeholder="Select a category"
             />
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="description" className="text-sm font-medium text-black">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="description" className="text-base leading-[26px] text-black">
                 Description
               </label>
               <textarea
@@ -70,9 +71,9 @@ export default function Step2() {
                 value={data.serviceDescription}
                 onChange={(e) => updateField('serviceDescription', e.target.value)}
                 placeholder="Tell customers what this service includes, who it's for, and what they should bring."
-                rows={3}
-                className="rounded-lg border border-brand-border px-3 py-2 text-sm text-black outline-none placeholder:text-[#A1A1AA] focus:ring-2 focus:ring-brand-primary/40"
+                className="h-[122px] resize-none rounded-lg border border-brand-border px-3 py-2 text-sm text-black outline-none placeholder:text-[#A1A1AA] focus:ring-2 focus:ring-brand-primary/40"
               />
+            </div>
             </div>
           </div>
         </section>

@@ -47,6 +47,10 @@ type BookingContextValue = {
   updateField: <K extends keyof BookingData>(key: K, value: BookingData[K]) => void
   currentStepIndex: number
   goToStep: (index: number) => void
+  /** Services that have been published — drives the Service screen's filled state. */
+  publishedServices: BookingData[]
+  /** Commits the in-progress draft to the published list and clears the draft. */
+  publishService: () => void
 }
 
 export const STEP_ROUTE = (n: number) => `/step-${n}`
@@ -63,6 +67,7 @@ export function BookingProvider({
 }) {
   const [data, setData] = useState<BookingData>({ ...INITIAL_DATA, ...initialData })
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [publishedServices, setPublishedServices] = useState<BookingData[]>([])
 
   function updateField<K extends keyof BookingData>(key: K, value: BookingData[K]) {
     setData((prev) => ({ ...prev, [key]: value }))
@@ -72,8 +77,15 @@ export function BookingProvider({
     setCurrentStepIndex(index)
   }
 
+  function publishService() {
+    setPublishedServices((prev) => [...prev, data])
+    setData({ ...INITIAL_DATA, ...initialData })
+  }
+
   return (
-    <BookingContext.Provider value={{ data, updateField, currentStepIndex, goToStep }}>
+    <BookingContext.Provider
+      value={{ data, updateField, currentStepIndex, goToStep, publishedServices, publishService }}
+    >
       {children}
     </BookingContext.Provider>
   )
