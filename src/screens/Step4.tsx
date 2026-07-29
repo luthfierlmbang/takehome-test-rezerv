@@ -3,8 +3,9 @@ import { WizardLayout } from '../components/WizardLayout'
 import { Card } from '../components/Card'
 import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
+import { TimeSelect } from '../components/TimeSelect'
 import { useBooking } from '../context/BookingContext'
-import { generateStartTimes, intervalMinutes, parseTimeToMinutes, snapToInterval } from '../lib/slots'
+import { generateStartTimes, parseTimeToMinutes, snapToInterval } from '../lib/slots'
 
 const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
 /** A long range can generate dozens of slots; cap the preview so it stays one tidy row. */
@@ -46,10 +47,7 @@ export default function Step4() {
     updateField('bookableUntil', data.slotInterval ? snapToInterval(value, data.slotInterval) : value)
   }
 
-  const stepSeconds = data.slotInterval ? intervalMinutes(data.slotInterval) * 60 : undefined
   const startTimes = generateStartTimes(data.bookableFrom, data.bookableUntil, data.slotInterval)
-  const timeFieldClass =
-    'h-9 rounded-lg border border-brand-border px-3 text-sm text-black outline-none focus:ring-2 focus:ring-brand-primary/40 disabled:bg-brand-surfaceMuted disabled:text-brand-textMuted'
 
   return (
     <WizardLayout stepIndex={2} onBack={() => navigate('/step-3')} onNext={() => navigate('/step-5')}>
@@ -86,35 +84,21 @@ export default function Step4() {
               options={INTERVALS}
               placeholder="Select interval"
             />
-            <div className="flex flex-col gap-2">
-              <label htmlFor="bookable-from" className="text-base leading-[26px] text-black">
-                Bookable from
-              </label>
-              <input
-                id="bookable-from"
-                type="time"
-                step={stepSeconds}
-                value={data.bookableFrom}
-                disabled={!data.slotInterval}
-                onChange={(e) => handleFromChange(e.target.value)}
-                className={timeFieldClass}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="bookable-until" className="text-base leading-[26px] text-black">
-                Until
-              </label>
-              <input
-                id="bookable-until"
-                type="time"
-                step={stepSeconds}
-                min={data.bookableFrom || undefined}
-                value={data.bookableUntil}
-                disabled={!data.slotInterval}
-                onChange={(e) => handleUntilChange(e.target.value)}
-                className={timeFieldClass}
-              />
-            </div>
+            <TimeSelect
+              label="Bookable from"
+              value={data.bookableFrom}
+              onChange={handleFromChange}
+              interval={data.slotInterval}
+              disabled={!data.slotInterval}
+            />
+            <TimeSelect
+              label="Until"
+              value={data.bookableUntil}
+              onChange={handleUntilChange}
+              interval={data.slotInterval}
+              after={data.bookableFrom}
+              disabled={!data.slotInterval}
+            />
           </div>
 
           {!data.slotInterval && (
