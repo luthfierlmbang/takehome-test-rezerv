@@ -34,20 +34,16 @@ test('renders duration checkboxes and generates start-time chips from the slot s
   await userEvent.selectOptions(screen.getByLabelText('Until'), '13:30')
 
   // The same times also appear as <option>s now, so scope to the generated chips.
-  // The chips show the whole grid; the duration's cut-off lives in the summary line.
+  // The chips show the whole grid, exactly as Figma draws it — one plain row.
   const chips = screen.getByText(/a day shows these start times/).parentElement as HTMLElement
   expect(within(chips).getByText('12.15pm')).toBeInTheDocument()
   expect(within(chips).getByText('12.45pm')).toBeInTheDocument()
-  // A 1-hour session must finish by 1.30pm, so its final start is 12.30pm.
-  expect(screen.getByText(/Last bookable start/)).toHaveTextContent('1 Hour 12.30pm')
 })
 
-test('the preview names the interval, and the last start per duration', async () => {
+test('the preview names the interval in human words', async () => {
   renderStep4()
 
   await waitFor(() => screen.getByLabelText('Slot Interval'))
-  await userEvent.click(screen.getByRole('checkbox', { name: '1 Hour' }))
-  await userEvent.click(screen.getByRole('checkbox', { name: '4 Hours' }))
   await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every 15 Min')
   await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
   await userEvent.selectOptions(screen.getByLabelText('Until'), '20:00')
@@ -56,14 +52,9 @@ test('the preview names the interval, and the last start per duration', async ()
   expect(screen.getByText(/Customers can start every/)).toHaveTextContent(
     'Customers can start every 15 minutes.',
   )
-
-  // The grid renders once; what a duration changes is one number each — its final start.
-  const line = screen.getByText(/Last bookable start/)
-  expect(line).toHaveTextContent('1 Hour 7.00pm')
-  expect(line).toHaveTextContent('4 Hours 4.00pm')
 })
 
-test('the last start honours each duration, and a session that cannot fit says so', async () => {
+test('the duration maths stays quiet until a package could never be booked', async () => {
   renderStep4()
 
   await waitFor(() => screen.getByLabelText('Slot Interval'))
@@ -73,16 +64,14 @@ test('the last start honours each duration, and a session that cannot fit says s
   await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
   await userEvent.selectOptions(screen.getByLabelText('Until'), '16:00')
 
-  // A 1-hour session can still start at 3pm; a 4-hour one only at noon —
-  // 3pm + 4 hours would end at 7pm, three hours past closing.
-  const line = () => screen.getByText(/Last bookable start/)
-  expect(line()).toHaveTextContent('1 Hour 3.00pm')
-  expect(line()).toHaveTextContent('4 Hours 12.00pm')
+  // 4 Hours fits a 12-4 day exactly, so there is nothing to say.
+  expect(screen.queryByText(/doesn't fit the bookable hours/)).not.toBeInTheDocument()
 
-  // Shrink the day below the longest session and it says so instead of lying.
+  // Shrink the day below the longest package and only then does it speak up.
   await userEvent.selectOptions(screen.getByLabelText('Until'), '15:00')
-  expect(line()).toHaveTextContent("4 Hours doesn't fit")
-  expect(line()).toHaveTextContent('1 Hour 2.00pm')
+  expect(screen.getByText(/4 Hours doesn't fit the bookable hours/)).toBeInTheDocument()
+  // The 1-hour package still fits, so it stays quiet.
+  expect(screen.queryByText(/1 Hour doesn't fit/)).not.toBeInTheDocument()
 })
 
 test('available days default to the working week and toggle', async () => {

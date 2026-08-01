@@ -108,6 +108,15 @@ export default function Step4() {
   // One grid across every group — always, until per-day intervals actually diverge.
   const sharedInterval = groups.every((g) => g.interval === groups[0]?.interval) ? (groups[0]?.interval ?? '') : ''
 
+  // A duration that fits no day at all can never be booked — that is the one duration
+  // fact worth interrupting the operator with.
+  const unfitDurations = groups.length
+    ? data.selectedDurations.filter((label) => {
+        const duration = durationMinutes(label) ?? 0
+        return groups.every((g) => generateStartTimes(g.from, g.until, g.interval, duration).length === 0)
+      })
+    : []
+
   return (
     <WizardLayout stepIndex={2} onBack={() => navigate('/step-3')} onNext={() => navigate('/step-5')}>
       <div className="flex flex-col gap-4">
@@ -261,15 +270,10 @@ export default function Step4() {
                 )}
               </p>
               {groups.map((group) => {
-                // One row of chips per schedule, exactly as Figma draws it. The durations
-                // change only where the day *ends* for a session of that length, so a row
-                // of near-identical chips per duration read as a bug — that difference is
-                // one number each, and it lives in the summary line below instead.
+                // One row of chips per schedule, exactly as Figma draws it. The duration
+                // maths runs quietly underneath and only speaks up — below, in red — when
+                // a chosen duration could never be booked at all.
                 const times = generateStartTimes(group.from, group.until, group.interval)
-                const lastStarts = data.selectedDurations.map((label) => {
-                  const fits = generateStartTimes(group.from, group.until, group.interval, durationMinutes(label) ?? 0)
-                  return { label, last: fits.length ? fits[fits.length - 1] : null }
-                })
                 return (
                   <div key={group.days.join()} className="flex flex-col gap-2">
                     {/* Only worth naming the days once more than one schedule is in play.
@@ -289,25 +293,19 @@ export default function Step4() {
                         <span className="text-xs text-brand-textMuted">+{times.length - MAX_VISIBLE_TIMES} more</span>
                       )}
                     </div>
-                    {lastStarts.length > 0 && (
-                      // A session must *finish* by closing, so each duration has its own
-                      // final start — 4 hours on a 12-4 day can only begin at noon.
-                      <p className="text-xs text-brand-textMuted">
-                        Last bookable start:{' '}
-                        {lastStarts.map(({ label, last }, i) => (
-                          <span key={label}>
-                            {i > 0 && ' · '}
-                            {label}{' '}
-                            <span className={last ? 'font-medium text-black' : 'italic'}>
-                              {last ?? "doesn't fit"}
-                            </span>
-                          </span>
-                        ))}
-                      </p>
-                    )}
                   </div>
                 )
               })}
+
+              {/* Quiet until it matters: a duration no day can hold means customers could
+                  pick a package that never has a single start time. That deserves a
+                  warning; everything short of that is just maths the operator didn't ask
+                  to see. */}
+              {unfitDurations.map((label) => (
+                <p key={label} className="text-xs text-[#D92D20]">
+                  {label} doesn't fit the bookable hours — customers would never be able to book it.
+                </p>
+              ))}
             </div>
           )}
         </div>
