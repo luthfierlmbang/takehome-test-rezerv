@@ -95,8 +95,18 @@ export function nextBlockedStart(windows: Window[], minutes: number): number | n
   return next ? next.start : null
 }
 
+/** Whether a slot *starting* here belongs to a claimed window. Start-inclusive. */
 export function isBlocked(windows: Window[], minutes: number): boolean {
   return windows.some((w) => minutes >= w.start && minutes < w.end)
+}
+
+/**
+ * Whether an *end* time falls inside a claimed window. Both edges are excluded: a window
+ * finishing exactly where another begins does not overlap it, so 12pm-1pm is legal next
+ * to a 1pm-3pm rule even though 1pm is a blocked *start*.
+ */
+export function isBlockedEnd(windows: Window[], minutes: number): boolean {
+  return windows.some((w) => minutes > w.start && minutes < w.end)
 }
 
 export type PreviewSlot = { time: string; price: string; ruledBy: string | null }

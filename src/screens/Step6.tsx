@@ -20,6 +20,7 @@ function summarize(data: BookingData) {
     Locations: data.offerAtLocation ? 'Padel Arena KLCC' : '—',
     Coaches: data.selectedCoaches.length ? data.selectedCoaches.join(', ') : '—',
     Durations: data.selectedDurations.length ? data.selectedDurations.join(' / ') : '—',
+    Days: data.availableDays.length ? data.availableDays.join(', ') : '—',
     'Start times': data.bookableFrom && data.bookableUntil ? `${data.bookableFrom} – ${data.bookableUntil}` : '—',
     Pricing: summarizePricing(data),
     Payment:

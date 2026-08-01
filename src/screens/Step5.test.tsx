@@ -141,6 +141,27 @@ test('a second same-day rule cannot claim hours the first already owns', async (
   expect(options).toContain('3.00pm')
 })
 
+test('a rule can end exactly where the next one starts', async () => {
+  renderStep5({
+    ...SCHEDULE,
+    priceRules: [
+      { id: 'r1', appliesOn: 'Weekends', from: '13:00', to: '15:00', price: '30' },
+      { id: 'r2', appliesOn: 'Weekends', from: '12:00', to: '', price: '' },
+    ],
+  })
+
+  await waitFor(() => screen.getByText('Rules 2'))
+
+  const options = within(screen.getAllByLabelText('To')[1])
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+    .filter((t) => t !== '--.--')
+
+  // 12pm-1pm butts up against rule 1 without overlapping it, so it has to be offerable —
+  // otherwise the rule is stranded with no valid end at all.
+  expect(options).toEqual(['1.00pm'])
+})
+
 test('a weekend rule is free to use hours a weekday rule owns', async () => {
   renderStep5({
     ...SCHEDULE,

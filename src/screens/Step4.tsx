@@ -8,6 +8,7 @@ import { useBooking } from '../context/BookingContext'
 import { generateStartTimes, parseTimeToMinutes, snapToInterval } from '../lib/slots'
 
 const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 /** A long range can generate dozens of slots; cap the preview so it stays one tidy row. */
 const MAX_VISIBLE_TIMES = 12
 const INTERVALS = ['Every 15 Min', 'Every 30 Min', 'Every Hour']
@@ -21,6 +22,12 @@ export default function Step4() {
       'selectedDurations',
       checked ? [...data.selectedDurations, label] : data.selectedDurations.filter((d) => d !== label),
     )
+  }
+
+  /** Kept in DAYS order so the summary reads Monday-first however they were clicked. */
+  function toggleDay(day: string, checked: boolean) {
+    const next = checked ? [...data.availableDays, day] : data.availableDays.filter((d) => d !== day)
+    updateField('availableDays', DAYS.filter((d) => next.includes(d)))
   }
 
   /**
@@ -73,6 +80,29 @@ export default function Step4() {
                 />
               ))}
             </div>
+          </div>
+
+          {/* "Avalaible" is Figma's spelling — kept so the screen matches the design 1:1. */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
+              <span id="days-group-label" className="text-base font-medium leading-[26px] text-black">
+                Avalaible Days
+              </span>
+              <p className="text-sm leading-[21px] text-brand-textMuted">Which days does this schedule apply to.</p>
+            </div>
+            <div role="group" aria-labelledby="days-group-label" className="flex flex-wrap gap-4">
+              {DAYS.map((day) => (
+                <CheckboxChip
+                  key={day}
+                  label={day}
+                  checked={data.availableDays.includes(day)}
+                  onChange={(checked) => toggleDay(day, checked)}
+                />
+              ))}
+            </div>
+            {data.availableDays.length === 0 && (
+              <p className="text-xs text-[#D92D20]">Pick at least one day, or the service can never be booked.</p>
+            )}
           </div>
 
           {/* Figma orders these Slot Interval → Bookable from → Until. */}

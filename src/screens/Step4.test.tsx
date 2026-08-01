@@ -39,6 +39,34 @@ test('renders duration checkboxes and generates start-time chips from the slot s
   expect(within(chips).getByText('12.45pm')).toBeInTheDocument()
 })
 
+test('available days default to the working week and toggle', async () => {
+  renderStep4()
+
+  await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Monday' })).toBeChecked())
+  expect(screen.getByRole('checkbox', { name: 'Friday' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Saturday' })).not.toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Sunday' })).not.toBeChecked()
+
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Saturday' }))
+  expect(screen.getByRole('checkbox', { name: 'Saturday' })).toBeChecked()
+
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Monday' }))
+  expect(screen.getByRole('checkbox', { name: 'Monday' })).not.toBeChecked()
+})
+
+test('warns when every day has been switched off', async () => {
+  renderStep4()
+
+  await waitFor(() => screen.getByRole('checkbox', { name: 'Monday' }))
+  expect(screen.queryByText(/Pick at least one day/)).not.toBeInTheDocument()
+
+  for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+    await userEvent.click(screen.getByRole('checkbox', { name: day }))
+  }
+
+  expect(screen.getByText(/Pick at least one day/)).toBeInTheDocument()
+})
+
 test('the time fields wait for an interval before they can be used', async () => {
   renderStep4()
 

@@ -18,6 +18,7 @@ export type BookingData = {
   offerAtLocation: boolean
   selectedCoaches: string[]
   selectedDurations: string[]
+  availableDays: string[]
   bookableFrom: string
   bookableUntil: string
   slotInterval: string
@@ -43,6 +44,8 @@ const INITIAL_DATA: BookingData = {
   offerAtLocation: true,
   selectedCoaches: [],
   selectedDurations: [],
+  // Figma shows the schedule starting on the working week, with the weekend off.
+  availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   bookableFrom: '',
   bookableUntil: '',
   slotInterval: '',

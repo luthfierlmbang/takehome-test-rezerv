@@ -2,10 +2,25 @@ import {
   buildDayPreview,
   dayScopesOverlap,
   generateStartTimes,
+  isBlocked,
+  isBlockedEnd,
   mergeWindows,
   nextBlockedStart,
   snapToInterval,
 } from './slots'
+
+test('a claimed window blocks starts on its opening edge but not ends', () => {
+  const claimed = [{ start: 780, end: 900 }] // 1pm-3pm
+
+  // A slot starting at 1pm belongs to the window; one starting at 3pm does not.
+  expect(isBlocked(claimed, 780)).toBe(true)
+  expect(isBlocked(claimed, 900)).toBe(false)
+
+  // Ends are exclusive at both edges, so a rule may finish exactly where this one starts.
+  expect(isBlockedEnd(claimed, 780)).toBe(false)
+  expect(isBlockedEnd(claimed, 900)).toBe(false)
+  expect(isBlockedEnd(claimed, 840)).toBe(true)
+})
 
 test('snaps a time down onto the interval grid', () => {
   expect(snapToInterval('12:15', 'Every 15 Min')).toBe('12:15')

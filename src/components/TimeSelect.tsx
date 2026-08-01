@@ -4,6 +4,7 @@ import {
   formatMinutes,
   intervalMinutes,
   isBlocked,
+  isBlockedEnd,
   minutesToTimeValue,
   nextBlockedStart,
   parseTimeToMinutes,
@@ -45,6 +46,9 @@ export function TimeSelect({
 }) {
   const id = useId()
   const step = intervalMinutes(interval)
+  // `after` is only given to the end of a range, and an end is exclusive: it may land on
+  // a claimed window's opening edge, where a *start* at the same time would be taken.
+  const isEnd = after !== undefined
   const floor = after ? parseTimeToMinutes(after) : null
   const lower = min ? parseTimeToMinutes(min) : null
   const upper = max ? parseTimeToMinutes(max) : null
@@ -59,7 +63,7 @@ export function TimeSelect({
     if (lower !== null && t < lower) continue
     if (upper !== null && t > upper) continue
     if (ceiling !== null && t > ceiling) continue
-    if (isBlocked(blocked, t)) continue
+    if (isEnd ? isBlockedEnd(blocked, t) : isBlocked(blocked, t)) continue
     options.push({ value: minutesToTimeValue(t), label: formatMinutes(t) })
   }
 
