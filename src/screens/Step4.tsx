@@ -261,16 +261,15 @@ export default function Step4() {
                 )}
               </p>
               {groups.map((group) => {
-                // A start only counts if the whole session fits before closing, so the
-                // preview splits per chosen duration — a 4-hour booking must not be
-                // offered 3pm on a day that ends at 4pm. With nothing chosen yet it
-                // falls back to the bare grid.
-                const rows = data.selectedDurations.length
-                  ? data.selectedDurations.map((label) => ({
-                      label,
-                      times: generateStartTimes(group.from, group.until, group.interval, durationMinutes(label) ?? 0),
-                    }))
-                  : [{ label: '', times: generateStartTimes(group.from, group.until, group.interval) }]
+                // One row of chips per schedule, exactly as Figma draws it. The durations
+                // change only where the day *ends* for a session of that length, so a row
+                // of near-identical chips per duration read as a bug — that difference is
+                // one number each, and it lives in the summary line below instead.
+                const times = generateStartTimes(group.from, group.until, group.interval)
+                const lastStarts = data.selectedDurations.map((label) => {
+                  const fits = generateStartTimes(group.from, group.until, group.interval, durationMinutes(label) ?? 0)
+                  return { label, last: fits.length ? fits[fits.length - 1] : null }
+                })
                 return (
                   <div key={group.days.join()} className="flex flex-col gap-2">
                     {/* Only worth naming the days once more than one schedule is in play.
@@ -280,30 +279,32 @@ export default function Step4() {
                         {group.days.join(', ')} <span className="text-brand-textMuted">· {group.interval}</span>
                       </p>
                     )}
-                    {rows.map((row) => (
-                      <div key={row.label} className="flex flex-wrap items-center gap-2">
-                        {row.label && <span className="w-14 text-xs text-brand-textMuted">{row.label}</span>}
-                        {row.times.length === 0 && (
-                          <span className="text-xs text-brand-textMuted">
-                            doesn't fit — the day is shorter than the session
-                          </span>
-                        )}
-                        {row.times.slice(0, MAX_VISIBLE_TIMES).map((time) => (
-                          <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
-                            {time}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {times.slice(0, MAX_VISIBLE_TIMES).map((time) => (
+                        <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
+                          {time}
+                        </span>
+                      ))}
+                      {times.length > MAX_VISIBLE_TIMES && (
+                        <span className="text-xs text-brand-textMuted">+{times.length - MAX_VISIBLE_TIMES} more</span>
+                      )}
+                    </div>
+                    {lastStarts.length > 0 && (
+                      // A session must *finish* by closing, so each duration has its own
+                      // final start — 4 hours on a 12-4 day can only begin at noon.
+                      <p className="text-xs text-brand-textMuted">
+                        Last bookable start:{' '}
+                        {lastStarts.map(({ label, last }, i) => (
+                          <span key={label}>
+                            {i > 0 && ' · '}
+                            {label}{' '}
+                            <span className={last ? 'font-medium text-black' : 'italic'}>
+                              {last ?? "doesn't fit"}
+                            </span>
                           </span>
                         ))}
-                        {row.times.length > MAX_VISIBLE_TIMES && (
-                          /* The tail is where durations differ — a truncated row that
-                             hides it makes every duration look identical, so name the
-                             last start a session of this length can still make. */
-                          <span className="text-xs text-brand-textMuted">
-                            +{row.times.length - MAX_VISIBLE_TIMES} more · last start{' '}
-                            <span className="font-medium text-black">{row.times[row.times.length - 1]}</span>
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                      </p>
+                    )}
                   </div>
                 )
               })}
