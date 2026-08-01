@@ -19,6 +19,9 @@ export type BookingData = {
   selectedCoaches: string[]
   selectedDurations: string[]
   availableDays: string[]
+  /** When true, each available day carries its own hours in `dayHours`. */
+  perDayHours: boolean
+  dayHours: Record<string, { from: string; until: string }>
   bookableFrom: string
   bookableUntil: string
   slotInterval: string
@@ -46,6 +49,9 @@ const INITIAL_DATA: BookingData = {
   selectedDurations: [],
   // Figma shows the schedule starting on the working week, with the weekend off.
   availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  // Off by default, so the screen at rest is the single shared row Figma shows.
+  perDayHours: false,
+  dayHours: {},
   bookableFrom: '',
   bookableUntil: '',
   slotInterval: '',

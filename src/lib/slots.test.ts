@@ -2,10 +2,13 @@ import {
   buildDayPreview,
   dayScopesOverlap,
   generateStartTimes,
+  hoursForDay,
   isBlocked,
   isBlockedEnd,
   mergeWindows,
   nextBlockedStart,
+  scheduleBounds,
+  scheduleGroups,
   snapToInterval,
 } from './slots'
 
@@ -83,6 +86,52 @@ test('where rules overlap, the later one wins', () => {
     { time: '2.00pm', price: '40', ruledBy: 'late' },
     { time: '3.00pm', price: '40', ruledBy: 'late' },
   ])
+})
+
+const WEEK = {
+  availableDays: ['Monday', 'Tuesday', 'Saturday'],
+  perDayHours: false,
+  dayHours: {},
+  bookableFrom: '12:00',
+  bookableUntil: '18:00',
+}
+
+test('days sharing hours collapse into one schedule group', () => {
+  expect(scheduleGroups(WEEK)).toEqual([{ days: ['Monday', 'Tuesday', 'Saturday'], from: '12:00', until: '18:00' }])
+
+  const split = {
+    ...WEEK,
+    perDayHours: true,
+    dayHours: { Saturday: { from: '09:00', until: '15:00' } },
+  }
+
+  // Monday and Tuesday fall back to the shared row, so only Saturday splits off.
+  expect(scheduleGroups(split)).toEqual([
+    { days: ['Monday', 'Tuesday'], from: '12:00', until: '18:00' },
+    { days: ['Saturday'], from: '09:00', until: '15:00' },
+  ])
+})
+
+test('schedule bounds span the outer edges of the whole week', () => {
+  expect(scheduleBounds(WEEK)).toEqual({ from: '12:00', until: '18:00' })
+
+  const split = {
+    ...WEEK,
+    perDayHours: true,
+    dayHours: { Saturday: { from: '09:00', until: '20:00' } },
+  }
+
+  // Earliest start across any day, latest end across any day.
+  expect(scheduleBounds(split)).toEqual({ from: '09:00', until: '20:00' })
+})
+
+test('a day with no hours of its own inherits the shared row', () => {
+  const schedule = { ...WEEK, perDayHours: true, dayHours: {} }
+  expect(hoursForDay('Monday', schedule)).toEqual({ from: '12:00', until: '18:00' })
+  expect(hoursForDay('Saturday', { ...schedule, dayHours: { Saturday: { from: '09:00', until: '15:00' } } })).toEqual({
+    from: '09:00',
+    until: '15:00',
+  })
 })
 
 test('day scopes only collide when they can share a calendar day', () => {

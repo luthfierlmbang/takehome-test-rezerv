@@ -64,6 +64,61 @@ export function generateStartTimes(from: string, until: string, interval: string
   return generateStartMinutes(from, until, interval).map(formatMinutes)
 }
 
+export type DayHours = { from: string; until: string }
+
+/** The hours a given day actually runs, falling back to the shared row. */
+export function hoursForDay(
+  day: string,
+  { perDayHours, dayHours, bookableFrom, bookableUntil }: ScheduleShape,
+): DayHours {
+  if (!perDayHours) return { from: bookableFrom, until: bookableUntil }
+  return dayHours[day] ?? { from: bookableFrom, until: bookableUntil }
+}
+
+export type ScheduleShape = {
+  availableDays: string[]
+  perDayHours: boolean
+  dayHours: Record<string, DayHours>
+  bookableFrom: string
+  bookableUntil: string
+}
+
+export type ScheduleGroup = { days: string[]; from: string; until: string }
+
+/**
+ * Available days bucketed by the hours they share, in day order.
+ *
+ * Everything downstream — the start-time preview, the pricing preview, the review
+ * summary — reads the schedule through this, so per-day hours cost them one loop instead
+ * of a special case. With per-day hours off it yields exactly one group, which is why
+ * those screens look unchanged until the operator asks for something different.
+ */
+export function scheduleGroups(schedule: ScheduleShape): ScheduleGroup[] {
+  const groups: ScheduleGroup[] = []
+  for (const day of schedule.availableDays) {
+    const { from, until } = hoursForDay(day, schedule)
+    const existing = groups.find((g) => g.from === from && g.until === until)
+    if (existing) existing.days.push(day)
+    else groups.push({ days: [day], from, until })
+  }
+  return groups
+}
+
+/**
+ * The outer edges of the whole week — a price rule has to sit inside these, since a
+ * window outside every day's hours could never price a real slot.
+ */
+export function scheduleBounds(schedule: ScheduleShape): DayHours {
+  const groups = scheduleGroups(schedule).filter((g) => g.from && g.until)
+  if (!groups.length) return { from: schedule.bookableFrom, until: schedule.bookableUntil }
+
+  const starts = groups.map((g) => parseTimeToMinutes(g.from)).filter((m): m is number => m !== null)
+  const ends = groups.map((g) => parseTimeToMinutes(g.until)).filter((m): m is number => m !== null)
+  if (!starts.length || !ends.length) return { from: schedule.bookableFrom, until: schedule.bookableUntil }
+
+  return { from: minutesToTimeValue(Math.min(...starts)), until: minutesToTimeValue(Math.max(...ends)) }
+}
+
 export type Window = { start: number; end: number }
 
 /**

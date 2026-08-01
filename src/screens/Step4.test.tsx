@@ -67,6 +67,52 @@ test('warns when every day has been switched off', async () => {
   expect(screen.getByText(/Pick at least one day/)).toBeInTheDocument()
 })
 
+test('per-day hours seed from the shared row, then split the start times', async () => {
+  renderStep4()
+
+  await waitFor(() => screen.getByLabelText('Slot Interval'))
+  await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every Hour')
+  await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
+  await userEvent.selectOptions(screen.getByLabelText('Until'), '15:00')
+
+  await userEvent.click(screen.getByRole('checkbox', { name: /different hours for each day/i }))
+
+  // The shared row is gone, replaced by a row per available day carrying its values.
+  expect(screen.queryByLabelText('Bookable from')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Monday bookable from')).toHaveValue('12:00')
+  expect(screen.getByLabelText('Friday until')).toHaveValue('15:00')
+  expect(screen.queryByLabelText('Saturday bookable from')).not.toBeInTheDocument()
+
+  // While every day still agrees, the preview stays a single unlabelled row.
+  const preview = () => screen.getByText(/a day shows these start times/).parentElement as HTMLElement
+  expect(within(preview()).queryByText('Monday, Tuesday, Wednesday, Thursday')).not.toBeInTheDocument()
+
+  await userEvent.selectOptions(screen.getByLabelText('Friday bookable from'), '13:00')
+
+  // Friday now runs its own hours, so the preview names both schedules and drops 12pm
+  // from Friday's row.
+  expect(within(preview()).getByText('Monday, Tuesday, Wednesday, Thursday')).toBeInTheDocument()
+  expect(within(preview()).getByText('Friday')).toBeInTheDocument()
+  expect(within(preview()).getAllByText('12.00pm')).toHaveLength(1)
+  expect(within(preview()).getAllByText('1.00pm')).toHaveLength(2)
+})
+
+test('turning per-day hours off returns to the shared row', async () => {
+  renderStep4()
+
+  await waitFor(() => screen.getByLabelText('Slot Interval'))
+  await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every Hour')
+  await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
+
+  const toggle = screen.getByRole('checkbox', { name: /different hours for each day/i })
+  await userEvent.click(toggle)
+  expect(screen.getByLabelText('Monday bookable from')).toBeInTheDocument()
+
+  await userEvent.click(toggle)
+  expect(screen.queryByLabelText('Monday bookable from')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Bookable from')).toHaveValue('12:00')
+})
+
 test('the time fields wait for an interval before they can be used', async () => {
   renderStep4()
 

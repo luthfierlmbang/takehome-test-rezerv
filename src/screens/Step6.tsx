@@ -5,6 +5,7 @@ import { Card } from '../components/Card'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { useBooking, type BookingData } from '../context/BookingContext'
 import { simulateAsyncLoad } from '../lib/simulateAsyncLoad'
+import { scheduleGroups } from '../lib/slots'
 
 /** Only rules with a usable window and price actually change what a customer pays. */
 function summarizePricing(data: BookingData): string {
@@ -21,7 +22,12 @@ function summarize(data: BookingData) {
     Coaches: data.selectedCoaches.length ? data.selectedCoaches.join(', ') : '—',
     Durations: data.selectedDurations.length ? data.selectedDurations.join(' / ') : '—',
     Days: data.availableDays.length ? data.availableDays.join(', ') : '—',
-    'Start times': data.bookableFrom && data.bookableUntil ? `${data.bookableFrom} – ${data.bookableUntil}` : '—',
+    // One line per set of hours, so a week with different weekend hours reads honestly.
+    'Start times':
+      scheduleGroups(data)
+        .filter((g) => g.from && g.until)
+        .map((g) => `${g.days.join(', ')} ${g.from} – ${g.until}`)
+        .join(' · ') || '—',
     Pricing: summarizePricing(data),
     Payment:
       [data.paymentDropIn && 'Drop-in', data.paymentClassPack && 'Class pack'].filter(Boolean).join(' · ') || '—',

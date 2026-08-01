@@ -8,7 +8,14 @@ import { CheckboxChip } from '../components/CheckboxChip'
 import { PricePreview } from '../components/PricePreview'
 import { TimeSelect } from '../components/TimeSelect'
 import { useBooking, type PriceRule } from '../context/BookingContext'
-import { clampToWindow, dayScopesOverlap, parseTimeToMinutes, snapToInterval, type Window } from '../lib/slots'
+import {
+  clampToWindow,
+  dayScopesOverlap,
+  parseTimeToMinutes,
+  scheduleBounds,
+  snapToInterval,
+  type Window,
+} from '../lib/slots'
 
 const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
 
@@ -25,7 +32,10 @@ export default function Step5() {
   // Figma shows the preview expanded, so it is visible unless explicitly hidden.
   const [hiddenPreviews, setHiddenPreviews] = useState<string[]>([])
 
-  const scheduleReady = Boolean(data.slotInterval && data.bookableFrom && data.bookableUntil)
+  // A rule must fit the whole week, so it is bounded by the outer edges of every day's
+  // hours rather than by the shared row — which is blank once hours are set per day.
+  const bounds = scheduleBounds(data)
+  const scheduleReady = Boolean(data.slotInterval && bounds.from && bounds.until)
 
   /**
    * The Schedule step owns the grid, so when it changes a rule set earlier can fall off
@@ -37,7 +47,7 @@ export default function Step5() {
 
     const reconcile = (value: string) => {
       if (!value) return value
-      return clampToWindow(snapToInterval(value, data.slotInterval), data.bookableFrom, data.bookableUntil)
+      return clampToWindow(snapToInterval(value, data.slotInterval), bounds.from, bounds.until)
     }
 
     for (const rule of data.priceRules) {
@@ -51,7 +61,7 @@ export default function Step5() {
     }
     // Deliberately keyed to the schedule only: re-running on every rule edit would fight the user.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.slotInterval, data.bookableFrom, data.bookableUntil, scheduleReady])
+  }, [data.slotInterval, bounds.from, bounds.until, scheduleReady])
 
   function handleRuleFromChange(id: string, value: string) {
     const rule = data.priceRules.find((r) => r.id === id)
@@ -189,8 +199,8 @@ export default function Step5() {
                       value={rule.from}
                       onChange={(v) => handleRuleFromChange(rule.id, v)}
                       interval={data.slotInterval}
-                      min={data.bookableFrom}
-                      max={data.bookableUntil}
+                      min={bounds.from}
+                      max={bounds.until}
                       blocked={claimed}
                       disabled={!scheduleReady}
                     />
@@ -200,7 +210,7 @@ export default function Step5() {
                       onChange={(v) => updatePriceRule(rule.id, 'to', v)}
                       interval={data.slotInterval}
                       after={rule.from}
-                      max={data.bookableUntil}
+                      max={bounds.until}
                       blocked={claimed}
                       disabled={!scheduleReady}
                     />

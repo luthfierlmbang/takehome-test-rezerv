@@ -30,6 +30,7 @@ export function TimeSelect({
   max,
   blocked = [],
   disabled,
+  hideLabel,
 }: {
   label: string
   value: string
@@ -43,6 +44,8 @@ export function TimeSelect({
   /** Minute ranges already claimed by another rule, hidden so windows can't collide. */
   blocked?: Window[]
   disabled?: boolean
+  /** Keeps the label for assistive tech while the row's own day column carries it visually. */
+  hideLabel?: boolean
 }) {
   const id = useId()
   const step = intervalMinutes(interval)
@@ -69,7 +72,7 @@ export function TimeSelect({
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-base leading-[26px] text-black">
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'text-base leading-[26px] text-black'}>
         {label}
       </label>
       <div className="relative">
