@@ -12,7 +12,9 @@ export default function App() {
   return (
     <div data-testid="app-shell">
       <MotionConfig reducedMotion="user">
-        <BrowserRouter>
+        {/* Vite's base is "/" locally and "/<repo>/" on GitHub Pages; the router has to
+            match it or none of the /step-N paths resolve once deployed. */}
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <BookingProvider>
             <Routes>
               <Route path="/" element={<Navigate to="/step-1" replace />} />
