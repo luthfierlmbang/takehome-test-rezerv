@@ -29,10 +29,11 @@ export function PricePreview({ data, ruleId }: { data: BookingData; ruleId: stri
     .filter((group) => group.days.length)
     .map((group) => ({
       days: group.days,
+      interval: group.interval,
       slots: buildDayPreview({
         from: group.from,
         until: group.until,
-        interval: data.slotInterval,
+        interval: group.interval,
         basePrice: data.basePrice,
         rules: data.priceRules,
       }),
@@ -58,7 +59,11 @@ export function PricePreview({ data, ruleId }: { data: BookingData; ruleId: stri
           blocks.map((block) => (
             <div key={block.days.join()} className="flex flex-col gap-2">
               {/* Naming the days only earns its space once the rule spans more than one schedule. */}
-              {blocks.length > 1 && <span className="text-sm text-brand-textMuted">{block.days.join(', ')}</span>}
+              {blocks.length > 1 && (
+                <span className="text-sm text-brand-textMuted">
+                  {block.days.join(', ')} · {block.interval}
+                </span>
+              )}
               <div className="flex flex-wrap gap-2">
                 {block.slots.map((slot) => {
                   const isOwn = slot.ruledBy === ruleId

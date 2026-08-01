@@ -97,6 +97,31 @@ test('per-day hours seed from the shared row, then split the start times', async
   expect(within(preview()).getAllByText('1.00pm')).toHaveLength(2)
 })
 
+test('a day can run its own interval, which re-snaps that day alone', async () => {
+  renderStep4()
+
+  await waitFor(() => screen.getByLabelText('Slot Interval'))
+  await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every Hour')
+  await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
+  await userEvent.selectOptions(screen.getByLabelText('Until'), '14:00')
+  await userEvent.click(screen.getByRole('checkbox', { name: /different hours for each day/i }))
+
+  // The shared interval moves into the rows with the hours rather than staying behind.
+  expect(screen.queryByLabelText('Slot Interval')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Friday slot interval')).toHaveValue('Every Hour')
+
+  await userEvent.selectOptions(screen.getByLabelText('Friday slot interval'), 'Every 30 Min')
+  await userEvent.selectOptions(screen.getByLabelText('Friday bookable from'), '12:30')
+
+  // Friday alone moved onto the half-hour grid; Monday still refuses a 12:30 start.
+  expect(screen.getByLabelText('Friday bookable from')).toHaveValue('12:30')
+  expect(optionsOf(screen.getByLabelText('Monday bookable from'))).not.toContain('12.30pm')
+
+  const preview = screen.getByText(/a day shows these start times/).parentElement as HTMLElement
+  expect(within(preview).getByText(/Monday, Tuesday, Wednesday, Thursday/)).toHaveTextContent('Every Hour')
+  expect(within(preview).getByText(/^Friday/)).toHaveTextContent('Every 30 Min')
+})
+
 test('turning per-day hours off returns to the shared row', async () => {
   renderStep4()
 

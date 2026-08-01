@@ -1,13 +1,14 @@
 import {
   buildDayPreview,
   dayScopesOverlap,
+  finestInterval,
   generateStartTimes,
-  hoursForDay,
   isBlocked,
   isBlockedEnd,
   mergeWindows,
   nextBlockedStart,
   scheduleBounds,
+  scheduleForDay,
   scheduleGroups,
   snapToInterval,
 } from './slots'
@@ -91,25 +92,55 @@ test('where rules overlap, the later one wins', () => {
 const WEEK = {
   availableDays: ['Monday', 'Tuesday', 'Saturday'],
   perDayHours: false,
-  dayHours: {},
+  daySchedules: {},
   bookableFrom: '12:00',
   bookableUntil: '18:00',
+  slotInterval: 'Every Hour',
 }
 
-test('days sharing hours collapse into one schedule group', () => {
-  expect(scheduleGroups(WEEK)).toEqual([{ days: ['Monday', 'Tuesday', 'Saturday'], from: '12:00', until: '18:00' }])
+test('days sharing a schedule collapse into one group', () => {
+  expect(scheduleGroups(WEEK)).toEqual([
+    { days: ['Monday', 'Tuesday', 'Saturday'], from: '12:00', until: '18:00', interval: 'Every Hour' },
+  ])
 
   const split = {
     ...WEEK,
     perDayHours: true,
-    dayHours: { Saturday: { from: '09:00', until: '15:00' } },
+    daySchedules: { Saturday: { from: '09:00', until: '15:00', interval: 'Every Hour' } },
   }
 
   // Monday and Tuesday fall back to the shared row, so only Saturday splits off.
   expect(scheduleGroups(split)).toEqual([
-    { days: ['Monday', 'Tuesday'], from: '12:00', until: '18:00' },
-    { days: ['Saturday'], from: '09:00', until: '15:00' },
+    { days: ['Monday', 'Tuesday'], from: '12:00', until: '18:00', interval: 'Every Hour' },
+    { days: ['Saturday'], from: '09:00', until: '15:00', interval: 'Every Hour' },
   ])
+})
+
+test('the interval alone is enough to split a group', () => {
+  const split = {
+    ...WEEK,
+    perDayHours: true,
+    // Same hours as the others, finer grid — still its own schedule.
+    daySchedules: { Saturday: { from: '12:00', until: '18:00', interval: 'Every 30 Min' } },
+  }
+
+  expect(scheduleGroups(split)).toEqual([
+    { days: ['Monday', 'Tuesday'], from: '12:00', until: '18:00', interval: 'Every Hour' },
+    { days: ['Saturday'], from: '12:00', until: '18:00', interval: 'Every 30 Min' },
+  ])
+})
+
+test('the finest interval in play wins, so rule edges stay reachable', () => {
+  expect(finestInterval(WEEK)).toBe('Every Hour')
+
+  const mixed = {
+    ...WEEK,
+    perDayHours: true,
+    daySchedules: { Saturday: { from: '12:00', until: '18:00', interval: 'Every 15 Min' } },
+  }
+
+  // A rule spans days, so it must be able to express Saturday's quarter-hour edges.
+  expect(finestInterval(mixed)).toBe('Every 15 Min')
 })
 
 test('schedule bounds span the outer edges of the whole week', () => {
@@ -118,20 +149,19 @@ test('schedule bounds span the outer edges of the whole week', () => {
   const split = {
     ...WEEK,
     perDayHours: true,
-    dayHours: { Saturday: { from: '09:00', until: '20:00' } },
+    daySchedules: { Saturday: { from: '09:00', until: '20:00', interval: 'Every Hour' } },
   }
 
   // Earliest start across any day, latest end across any day.
   expect(scheduleBounds(split)).toEqual({ from: '09:00', until: '20:00' })
 })
 
-test('a day with no hours of its own inherits the shared row', () => {
-  const schedule = { ...WEEK, perDayHours: true, dayHours: {} }
-  expect(hoursForDay('Monday', schedule)).toEqual({ from: '12:00', until: '18:00' })
-  expect(hoursForDay('Saturday', { ...schedule, dayHours: { Saturday: { from: '09:00', until: '15:00' } } })).toEqual({
-    from: '09:00',
-    until: '15:00',
-  })
+test('a day with no schedule of its own inherits the shared row', () => {
+  const schedule = { ...WEEK, perDayHours: true, daySchedules: {} }
+  expect(scheduleForDay('Monday', schedule)).toEqual({ from: '12:00', until: '18:00', interval: 'Every Hour' })
+
+  const saturday = { from: '09:00', until: '15:00', interval: 'Every 30 Min' }
+  expect(scheduleForDay('Saturday', { ...schedule, daySchedules: { Saturday: saturday } })).toEqual(saturday)
 })
 
 test('day scopes only collide when they can share a calendar day', () => {

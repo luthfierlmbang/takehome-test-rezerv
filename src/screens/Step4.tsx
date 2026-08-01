@@ -5,7 +5,7 @@ import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
 import { TimeSelect } from '../components/TimeSelect'
 import { useBooking } from '../context/BookingContext'
-import { generateStartTimes, hoursForDay, parseTimeToMinutes, scheduleGroups, snapToInterval } from '../lib/slots'
+import { generateStartTimes, parseTimeToMinutes, scheduleForDay, scheduleGroups, snapToInterval } from '../lib/slots'
 
 const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -55,34 +55,43 @@ export default function Step4() {
   }
 
   /**
-   * Turning per-day hours on seeds every available day from the shared row, so the
+   * Turning per-day schedules on seeds every available day from the shared row, so the
    * operator edits away from a working schedule instead of seven empty ones.
    */
   function handlePerDayToggle(perDay: boolean) {
     if (perDay) {
-      const seeded: Record<string, { from: string; until: string }> = { ...data.dayHours }
+      const seeded = { ...data.daySchedules }
       for (const day of data.availableDays) {
-        seeded[day] ??= { from: data.bookableFrom, until: data.bookableUntil }
+        seeded[day] ??= { from: data.bookableFrom, until: data.bookableUntil, interval: data.slotInterval }
       }
-      updateField('dayHours', seeded)
+      updateField('daySchedules', seeded)
     }
     updateField('perDayHours', perDay)
   }
 
-  function handleDayHoursChange(day: string, key: 'from' | 'until', value: string) {
-    const current = hoursForDay(day, data)
-    const snapped = data.slotInterval ? snapToInterval(value, data.slotInterval) : value
-    const next = { ...current, [key]: snapped }
-    // An end at or before the start can no longer stand.
-    if (key === 'from') {
-      const start = parseTimeToMinutes(snapped)
-      const end = parseTimeToMinutes(current.until)
-      if (start !== null && end !== null && end <= start) next.until = ''
+  function handleDayScheduleChange(day: string, key: 'from' | 'until' | 'interval', value: string) {
+    const current = scheduleForDay(day, data)
+    const next = { ...current }
+
+    if (key === 'interval') {
+      // The day's own grid moved, so its hours re-snap onto it.
+      next.interval = value
+      next.from = snapToInterval(current.from, value)
+      next.until = snapToInterval(current.until, value)
+    } else {
+      next[key] = current.interval ? snapToInterval(value, current.interval) : value
+      // An end at or before the start can no longer stand.
+      if (key === 'from') {
+        const start = parseTimeToMinutes(next.from)
+        const end = parseTimeToMinutes(current.until)
+        if (start !== null && end !== null && end <= start) next.until = ''
+      }
     }
-    updateField('dayHours', { ...data.dayHours, [day]: next })
+
+    updateField('daySchedules', { ...data.daySchedules, [day]: next })
   }
 
-  const groups = scheduleGroups(data).filter((group) => generateStartTimes(group.from, group.until, data.slotInterval).length)
+  const groups = scheduleGroups(data).filter((g) => generateStartTimes(g.from, g.until, g.interval).length)
 
   return (
     <WizardLayout stepIndex={2} onBack={() => navigate('/step-3')} onNext={() => navigate('/step-5')}>
@@ -133,37 +142,35 @@ export default function Step4() {
             )}
           </div>
 
-          {/* Figma orders these Slot Interval → Bookable from → Until. The interval stays
-              shared even when the hours differ: it sets how coarse the grid is, and a day
-              that ran on a different grid would make the price rules unreadable. */}
-          <div className="grid grid-cols-3 gap-4">
-            <Select
-              label="Slot Interval"
-              value={data.slotInterval}
-              onChange={handleIntervalChange}
-              options={INTERVALS}
-              placeholder="Select interval"
-            />
-            {!data.perDayHours && (
-              <>
-                <TimeSelect
-                  label="Bookable from"
-                  value={data.bookableFrom}
-                  onChange={handleFromChange}
-                  interval={data.slotInterval}
-                  disabled={!data.slotInterval}
-                />
-                <TimeSelect
-                  label="Until"
-                  value={data.bookableUntil}
-                  onChange={handleUntilChange}
-                  interval={data.slotInterval}
-                  after={data.bookableFrom}
-                  disabled={!data.slotInterval}
-                />
-              </>
-            )}
-          </div>
+          {/* Figma orders these Slot Interval → Bookable from → Until. All three move into
+              the per-day rows together: a day's interval belongs with the hours it applies
+              to, and splitting them would leave the grid claiming to be shared. */}
+          {!data.perDayHours && (
+            <div className="grid grid-cols-3 gap-4">
+              <Select
+                label="Slot Interval"
+                value={data.slotInterval}
+                onChange={handleIntervalChange}
+                options={INTERVALS}
+                placeholder="Select interval"
+              />
+              <TimeSelect
+                label="Bookable from"
+                value={data.bookableFrom}
+                onChange={handleFromChange}
+                interval={data.slotInterval}
+                disabled={!data.slotInterval}
+              />
+              <TimeSelect
+                label="Until"
+                value={data.bookableUntil}
+                onChange={handleUntilChange}
+                interval={data.slotInterval}
+                after={data.bookableFrom}
+                disabled={!data.slotInterval}
+              />
+            </div>
+          )}
 
           <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-black">
             <input
@@ -178,26 +185,34 @@ export default function Step4() {
           {data.perDayHours && (
             <div className="flex flex-col divide-y divide-brand-border rounded-lg border border-brand-border">
               {DAYS.filter((day) => data.availableDays.includes(day)).map((day) => {
-                const hours = hoursForDay(day, data)
+                const schedule = scheduleForDay(day, data)
                 return (
-                  <div key={day} className="grid grid-cols-[120px_1fr_1fr] items-center gap-4 px-4 py-3">
+                  <div key={day} className="grid grid-cols-[110px_1fr_1fr_1fr] items-center gap-4 px-4 py-3">
                     <span className="text-sm font-medium text-black">{day}</span>
+                    <Select
+                      label={`${day} slot interval`}
+                      hideLabel
+                      value={schedule.interval}
+                      onChange={(v) => handleDayScheduleChange(day, 'interval', v)}
+                      options={INTERVALS}
+                      placeholder="Select interval"
+                    />
                     <TimeSelect
                       label={`${day} bookable from`}
                       hideLabel
-                      value={hours.from}
-                      onChange={(v) => handleDayHoursChange(day, 'from', v)}
-                      interval={data.slotInterval}
-                      disabled={!data.slotInterval}
+                      value={schedule.from}
+                      onChange={(v) => handleDayScheduleChange(day, 'from', v)}
+                      interval={schedule.interval}
+                      disabled={!schedule.interval}
                     />
                     <TimeSelect
                       label={`${day} until`}
                       hideLabel
-                      value={hours.until}
-                      onChange={(v) => handleDayHoursChange(day, 'until', v)}
-                      interval={data.slotInterval}
-                      after={hours.from}
-                      disabled={!data.slotInterval}
+                      value={schedule.until}
+                      onChange={(v) => handleDayScheduleChange(day, 'until', v)}
+                      interval={schedule.interval}
+                      after={schedule.from}
+                      disabled={!schedule.interval}
                     />
                   </div>
                 )
@@ -210,23 +225,23 @@ export default function Step4() {
             </div>
           )}
 
-          {!data.slotInterval && (
+          {!data.perDayHours && !data.slotInterval && (
             <p className="text-xs text-brand-textMuted">Pick a slot interval first — it sets the times you can choose.</p>
           )}
 
           {groups.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs text-brand-textMuted">
-                Customers can start every <span className="font-medium text-black">{data.slotInterval}</span>. With these
-                settings, a day shows these start times:
-              </p>
+              <p className="text-xs text-brand-textMuted">With these settings, a day shows these start times:</p>
               {groups.map((group) => {
-                const times = generateStartTimes(group.from, group.until, data.slotInterval)
+                const times = generateStartTimes(group.from, group.until, group.interval)
                 return (
                   <div key={group.days.join()}>
-                    {/* Only worth naming the days once more than one schedule is in play. */}
+                    {/* Only worth naming the days once more than one schedule is in play.
+                        The interval rides along, since it can now differ per group too. */}
                     {groups.length > 1 && (
-                      <p className="mb-1 text-xs font-medium text-black">{group.days.join(', ')}</p>
+                      <p className="mb-1 text-xs font-medium text-black">
+                        {group.days.join(', ')} <span className="text-brand-textMuted">· {group.interval}</span>
+                      </p>
                     )}
                     <div className="flex flex-wrap items-center gap-2">
                       {times.slice(0, MAX_VISIBLE_TIMES).map((time) => (

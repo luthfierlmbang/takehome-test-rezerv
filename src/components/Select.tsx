@@ -7,15 +7,17 @@ type SelectProps = {
   onChange: (value: string) => void
   options: string[]
   placeholder?: string
+  /** Keeps the label for assistive tech while a row column carries it visually. */
+  hideLabel?: boolean
 }
 
 /** Metrics match the Figma "Input/Text Fields" component: 16px label, 8px gap, 36px field. */
-export function Select({ label, value, onChange, options, placeholder }: SelectProps) {
+export function Select({ label, value, onChange, options, placeholder, hideLabel }: SelectProps) {
   const id = useId()
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-base leading-[26px] text-black">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "text-base leading-[26px] text-black"}>
         {label}
       </label>
       <div className="relative">

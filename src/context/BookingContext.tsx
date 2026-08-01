@@ -19,9 +19,9 @@ export type BookingData = {
   selectedCoaches: string[]
   selectedDurations: string[]
   availableDays: string[]
-  /** When true, each available day carries its own hours in `dayHours`. */
+  /** When true, each available day carries its own hours and interval in `daySchedules`. */
   perDayHours: boolean
-  dayHours: Record<string, { from: string; until: string }>
+  daySchedules: Record<string, { from: string; until: string; interval: string }>
   bookableFrom: string
   bookableUntil: string
   slotInterval: string
@@ -51,7 +51,7 @@ const INITIAL_DATA: BookingData = {
   availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   // Off by default, so the screen at rest is the single shared row Figma shows.
   perDayHours: false,
-  dayHours: {},
+  daySchedules: {},
   bookableFrom: '',
   bookableUntil: '',
   slotInterval: '',

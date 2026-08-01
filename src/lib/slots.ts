@@ -64,51 +64,67 @@ export function generateStartTimes(from: string, until: string, interval: string
   return generateStartMinutes(from, until, interval).map(formatMinutes)
 }
 
-export type DayHours = { from: string; until: string }
+export type DaySchedule = { from: string; until: string; interval: string }
 
-/** The hours a given day actually runs, falling back to the shared row. */
-export function hoursForDay(
+/** What a given day actually runs, falling back to the shared row. */
+export function scheduleForDay(
   day: string,
-  { perDayHours, dayHours, bookableFrom, bookableUntil }: ScheduleShape,
-): DayHours {
-  if (!perDayHours) return { from: bookableFrom, until: bookableUntil }
-  return dayHours[day] ?? { from: bookableFrom, until: bookableUntil }
+  { perDayHours, daySchedules, bookableFrom, bookableUntil, slotInterval }: ScheduleShape,
+): DaySchedule {
+  const shared = { from: bookableFrom, until: bookableUntil, interval: slotInterval }
+  if (!perDayHours) return shared
+  return daySchedules[day] ?? shared
 }
 
 export type ScheduleShape = {
   availableDays: string[]
   perDayHours: boolean
-  dayHours: Record<string, DayHours>
+  daySchedules: Record<string, DaySchedule>
   bookableFrom: string
   bookableUntil: string
+  slotInterval: string
 }
 
-export type ScheduleGroup = { days: string[]; from: string; until: string }
+export type ScheduleGroup = { days: string[]; from: string; until: string; interval: string }
 
 /**
- * Available days bucketed by the hours they share, in day order.
+ * Available days bucketed by the schedule they share, in day order.
  *
  * Everything downstream — the start-time preview, the pricing preview, the review
- * summary — reads the schedule through this, so per-day hours cost them one loop instead
- * of a special case. With per-day hours off it yields exactly one group, which is why
+ * summary — reads the schedule through this, so per-day schedules cost them one loop
+ * instead of a special case. With per-day off it yields exactly one group, which is why
  * those screens look unchanged until the operator asks for something different.
  */
 export function scheduleGroups(schedule: ScheduleShape): ScheduleGroup[] {
   const groups: ScheduleGroup[] = []
   for (const day of schedule.availableDays) {
-    const { from, until } = hoursForDay(day, schedule)
-    const existing = groups.find((g) => g.from === from && g.until === until)
+    const { from, until, interval } = scheduleForDay(day, schedule)
+    const existing = groups.find((g) => g.from === from && g.until === until && g.interval === interval)
     if (existing) existing.days.push(day)
-    else groups.push({ days: [day], from, until })
+    else groups.push({ days: [day], from, until, interval })
   }
   return groups
+}
+
+/**
+ * The finest grid any day runs on. A price rule spans days, so its boundaries are offered
+ * on this grid — otherwise an hourly weekday would hide the 1.30pm edge a half-hourly
+ * Saturday genuinely has. A rule is a plain time range, so it prices each day's slots
+ * correctly whether or not its edges land on that day's own grid.
+ */
+export function finestInterval(schedule: ScheduleShape): string {
+  const intervals = scheduleGroups(schedule)
+    .map((g) => g.interval)
+    .filter(Boolean)
+  if (!intervals.length) return schedule.slotInterval
+  return intervals.reduce((finest, i) => (intervalMinutes(i) < intervalMinutes(finest) ? i : finest))
 }
 
 /**
  * The outer edges of the whole week — a price rule has to sit inside these, since a
  * window outside every day's hours could never price a real slot.
  */
-export function scheduleBounds(schedule: ScheduleShape): DayHours {
+export function scheduleBounds(schedule: ScheduleShape): { from: string; until: string } {
   const groups = scheduleGroups(schedule).filter((g) => g.from && g.until)
   if (!groups.length) return { from: schedule.bookableFrom, until: schedule.bookableUntil }
 

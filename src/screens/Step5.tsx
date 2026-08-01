@@ -12,6 +12,7 @@ import {
   clampToWindow,
   dayScopesOverlap,
   parseTimeToMinutes,
+  finestInterval,
   scheduleBounds,
   snapToInterval,
   type Window,
@@ -35,7 +36,10 @@ export default function Step5() {
   // A rule must fit the whole week, so it is bounded by the outer edges of every day's
   // hours rather than by the shared row — which is blank once hours are set per day.
   const bounds = scheduleBounds(data)
-  const scheduleReady = Boolean(data.slotInterval && bounds.from && bounds.until)
+  // Rules span days, so their edges are offered on the finest grid any day runs on —
+  // an hourly weekday must not hide the 1.30pm edge a half-hourly Saturday really has.
+  const ruleInterval = finestInterval(data)
+  const scheduleReady = Boolean(ruleInterval && bounds.from && bounds.until)
 
   /**
    * The Schedule step owns the grid, so when it changes a rule set earlier can fall off
@@ -47,7 +51,7 @@ export default function Step5() {
 
     const reconcile = (value: string) => {
       if (!value) return value
-      return clampToWindow(snapToInterval(value, data.slotInterval), bounds.from, bounds.until)
+      return clampToWindow(snapToInterval(value, ruleInterval), bounds.from, bounds.until)
     }
 
     for (const rule of data.priceRules) {
@@ -61,7 +65,7 @@ export default function Step5() {
     }
     // Deliberately keyed to the schedule only: re-running on every rule edit would fight the user.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.slotInterval, bounds.from, bounds.until, scheduleReady])
+  }, [ruleInterval, bounds.from, bounds.until, scheduleReady])
 
   function handleRuleFromChange(id: string, value: string) {
     const rule = data.priceRules.find((r) => r.id === id)
@@ -198,7 +202,7 @@ export default function Step5() {
                       label="Time book from"
                       value={rule.from}
                       onChange={(v) => handleRuleFromChange(rule.id, v)}
-                      interval={data.slotInterval}
+                      interval={ruleInterval}
                       min={bounds.from}
                       max={bounds.until}
                       blocked={claimed}
@@ -208,7 +212,7 @@ export default function Step5() {
                       label="To"
                       value={rule.to}
                       onChange={(v) => updatePriceRule(rule.id, 'to', v)}
-                      interval={data.slotInterval}
+                      interval={ruleInterval}
                       after={rule.from}
                       max={bounds.until}
                       blocked={claimed}
