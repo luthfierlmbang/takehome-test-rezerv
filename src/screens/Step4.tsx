@@ -20,6 +20,12 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const MAX_VISIBLE_TIMES = 12
 const INTERVALS = ['Every 15 Min', 'Every 30 Min', 'Every Hour']
 
+/** 'Every 15 Min' -> '15 minutes', matching Figma's sentence under the fields. */
+function intervalPhrase(label: string): string {
+  if (label === 'Every Hour') return 'hour'
+  return label.replace('Every ', '').replace('Min', 'minutes')
+}
+
 export default function Step4() {
   const navigate = useNavigate()
   const { data, updateField } = useBooking()
@@ -99,6 +105,8 @@ export default function Step4() {
   }
 
   const groups = scheduleGroups(data).filter((g) => generateStartTimes(g.from, g.until, g.interval).length)
+  // One grid across every group — always, until per-day intervals actually diverge.
+  const sharedInterval = groups.every((g) => g.interval === groups[0]?.interval) ? (groups[0]?.interval ?? '') : ''
 
   return (
     <WizardLayout stepIndex={2} onBack={() => navigate('/step-3')} onNext={() => navigate('/step-5')}>
@@ -238,7 +246,20 @@ export default function Step4() {
 
           {groups.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs text-brand-textMuted">With these settings, a day shows these start times:</p>
+              {/* Figma's sentence — dropped by mistake when intervals went per-day, which
+                  left the interval unreadable in the preview. It holds whenever every
+                  group runs one grid, i.e. always until per-day intervals diverge. */}
+              <p className="text-xs text-brand-textMuted">
+                {sharedInterval ? (
+                  <>
+                    Customers can start every{' '}
+                    <span className="font-medium text-black">{intervalPhrase(sharedInterval)}</span>. With these
+                    settings, a day shows these start times:
+                  </>
+                ) : (
+                  'With these settings, a day shows these start times:'
+                )}
+              </p>
               {groups.map((group) => {
                 // A start only counts if the whole session fits before closing, so the
                 // preview splits per chosen duration — a 4-hour booking must not be
@@ -273,7 +294,13 @@ export default function Step4() {
                           </span>
                         ))}
                         {row.times.length > MAX_VISIBLE_TIMES && (
-                          <span className="text-xs text-brand-textMuted">+{row.times.length - MAX_VISIBLE_TIMES} more</span>
+                          /* The tail is where durations differ — a truncated row that
+                             hides it makes every duration look identical, so name the
+                             last start a session of this length can still make. */
+                          <span className="text-xs text-brand-textMuted">
+                            +{row.times.length - MAX_VISIBLE_TIMES} more · last start{' '}
+                            <span className="font-medium text-black">{row.times[row.times.length - 1]}</span>
+                          </span>
                         )}
                       </div>
                     ))}

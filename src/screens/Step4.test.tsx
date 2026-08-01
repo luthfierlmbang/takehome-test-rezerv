@@ -41,6 +41,29 @@ test('renders duration checkboxes and generates start-time chips from the slot s
   expect(within(chips).queryByText('12.45pm')).not.toBeInTheDocument()
 })
 
+test('the preview names the interval, and truncated rows show their last start', async () => {
+  renderStep4()
+
+  await waitFor(() => screen.getByLabelText('Slot Interval'))
+  await userEvent.click(screen.getByRole('checkbox', { name: '1 Hour' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: '4 Hours' }))
+  await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every 15 Min')
+  await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
+  await userEvent.selectOptions(screen.getByLabelText('Until'), '20:00')
+
+  // Figma's sentence, with the interval in human words.
+  expect(screen.getByText(/Customers can start every/)).toHaveTextContent(
+    'Customers can start every 15 minutes.',
+  )
+
+  // Twelve visible chips are identical for every duration here — the difference lives
+  // in the tail, so each truncated row names the last start it can actually offer.
+  const preview = screen.getByText(/a day shows these start times/).parentElement as HTMLElement
+  const rowOf = (label: string) => within(preview).getByText(label).parentElement as HTMLElement
+  expect(within(rowOf('1 Hour')).getByText(/last start/)).toHaveTextContent('7.00pm')
+  expect(within(rowOf('4 Hours')).getByText(/last start/)).toHaveTextContent('4.00pm')
+})
+
 test('start times are filtered per duration, and a session that cannot fit says so', async () => {
   renderStep4()
 
