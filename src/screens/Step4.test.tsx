@@ -31,12 +31,40 @@ test('renders duration checkboxes and generates start-time chips from the slot s
 
   await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every 15 Min')
   await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:15')
-  await userEvent.selectOptions(screen.getByLabelText('Until'), '13:00')
+  await userEvent.selectOptions(screen.getByLabelText('Until'), '13:30')
 
   // The same times also appear as <option>s now, so scope to the generated chips.
+  // With "1 Hour" ticked, only starts whose session finishes by 1.30pm are shown.
   const chips = screen.getByText(/a day shows these start times/).parentElement as HTMLElement
   expect(within(chips).getByText('12.15pm')).toBeInTheDocument()
-  expect(within(chips).getByText('12.45pm')).toBeInTheDocument()
+  expect(within(chips).getByText('12.30pm')).toBeInTheDocument()
+  expect(within(chips).queryByText('12.45pm')).not.toBeInTheDocument()
+})
+
+test('start times are filtered per duration, and a session that cannot fit says so', async () => {
+  renderStep4()
+
+  await waitFor(() => screen.getByLabelText('Slot Interval'))
+  await userEvent.click(screen.getByRole('checkbox', { name: '1 Hour' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: '4 Hours' }))
+  await userEvent.selectOptions(screen.getByLabelText('Slot Interval'), 'Every Hour')
+  await userEvent.selectOptions(screen.getByLabelText('Bookable from'), '12:00')
+  await userEvent.selectOptions(screen.getByLabelText('Until'), '16:00')
+
+  const preview = screen.getByText(/a day shows these start times/).parentElement as HTMLElement
+  const rowOf = (label: string) =>
+    within(preview).getByText(label).parentElement as HTMLElement
+
+  // A 1-hour session can still start at 3pm; a 4-hour one only at noon —
+  // 3pm + 4 hours would end at 7pm, three hours past closing.
+  expect(within(rowOf('1 Hour')).getByText('3.00pm')).toBeInTheDocument()
+  expect(within(rowOf('4 Hours')).getByText('12.00pm')).toBeInTheDocument()
+  expect(within(rowOf('4 Hours')).queryByText('1.00pm')).not.toBeInTheDocument()
+
+  // Shrink the day below the longest session and it says so instead of lying.
+  await userEvent.selectOptions(screen.getByLabelText('Until'), '15:00')
+  expect(within(rowOf('4 Hours')).getByText(/doesn't fit/)).toBeInTheDocument()
+  expect(within(rowOf('1 Hour')).getByText('2.00pm')).toBeInTheDocument()
 })
 
 test('available days default to the working week and toggle', async () => {

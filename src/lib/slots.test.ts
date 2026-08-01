@@ -1,6 +1,7 @@
 import {
   buildDayPreview,
   dayScopesOverlap,
+  durationMinutes,
   finestInterval,
   generateStartTimes,
   isBlocked,
@@ -39,6 +40,20 @@ test('generates start times on the chosen interval', () => {
   expect(generateStartTimes('12:00', '13:00', 'Every Hour')).toEqual(['12.00pm'])
   // An end at or before the start yields nothing rather than looping.
   expect(generateStartTimes('13:00', '12:00', 'Every Hour')).toEqual([])
+})
+
+test('a duration keeps only the starts whose session finishes by closing', () => {
+  // 12-4 with a 4-hour session: noon is the one start that still ends on time.
+  expect(generateStartTimes('12:00', '16:00', 'Every Hour', 240)).toEqual(['12.00pm'])
+  expect(generateStartTimes('12:00', '16:00', 'Every Hour', 60)).toEqual(['12.00pm', '1.00pm', '2.00pm', '3.00pm'])
+  // A day shorter than the session offers nothing at all.
+  expect(generateStartTimes('09:00', '12:00', 'Every Hour', 240)).toEqual([])
+})
+
+test('duration labels parse to minutes', () => {
+  expect(durationMinutes('1 Hour')).toBe(60)
+  expect(durationMinutes('4 Hours')).toBe(240)
+  expect(durationMinutes('nonsense')).toBeNull()
 })
 
 test('prices only the slots that start inside the rule window', () => {

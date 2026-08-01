@@ -5,7 +5,14 @@ import { Select } from '../components/Select'
 import { CheckboxChip } from '../components/CheckboxChip'
 import { TimeSelect } from '../components/TimeSelect'
 import { useBooking } from '../context/BookingContext'
-import { generateStartTimes, parseTimeToMinutes, scheduleForDay, scheduleGroups, snapToInterval } from '../lib/slots'
+import {
+  durationMinutes,
+  generateStartTimes,
+  parseTimeToMinutes,
+  scheduleForDay,
+  scheduleGroups,
+  snapToInterval,
+} from '../lib/slots'
 
 const DURATIONS = ['1 Hour', '2 Hours', '4 Hours']
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -233,26 +240,43 @@ export default function Step4() {
             <div className="flex flex-col gap-3">
               <p className="text-xs text-brand-textMuted">With these settings, a day shows these start times:</p>
               {groups.map((group) => {
-                const times = generateStartTimes(group.from, group.until, group.interval)
+                // A start only counts if the whole session fits before closing, so the
+                // preview splits per chosen duration — a 4-hour booking must not be
+                // offered 3pm on a day that ends at 4pm. With nothing chosen yet it
+                // falls back to the bare grid.
+                const rows = data.selectedDurations.length
+                  ? data.selectedDurations.map((label) => ({
+                      label,
+                      times: generateStartTimes(group.from, group.until, group.interval, durationMinutes(label) ?? 0),
+                    }))
+                  : [{ label: '', times: generateStartTimes(group.from, group.until, group.interval) }]
                 return (
-                  <div key={group.days.join()}>
+                  <div key={group.days.join()} className="flex flex-col gap-2">
                     {/* Only worth naming the days once more than one schedule is in play.
                         The interval rides along, since it can now differ per group too. */}
                     {groups.length > 1 && (
-                      <p className="mb-1 text-xs font-medium text-black">
+                      <p className="text-xs font-medium text-black">
                         {group.days.join(', ')} <span className="text-brand-textMuted">· {group.interval}</span>
                       </p>
                     )}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {times.slice(0, MAX_VISIBLE_TIMES).map((time) => (
-                        <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
-                          {time}
-                        </span>
-                      ))}
-                      {times.length > MAX_VISIBLE_TIMES && (
-                        <span className="text-xs text-brand-textMuted">+{times.length - MAX_VISIBLE_TIMES} more</span>
-                      )}
-                    </div>
+                    {rows.map((row) => (
+                      <div key={row.label} className="flex flex-wrap items-center gap-2">
+                        {row.label && <span className="w-14 text-xs text-brand-textMuted">{row.label}</span>}
+                        {row.times.length === 0 && (
+                          <span className="text-xs text-brand-textMuted">
+                            doesn't fit — the day is shorter than the session
+                          </span>
+                        )}
+                        {row.times.slice(0, MAX_VISIBLE_TIMES).map((time) => (
+                          <span key={time} className="rounded-lg bg-brand-surfaceMuted px-2 py-1 text-xs text-black">
+                            {time}
+                          </span>
+                        ))}
+                        {row.times.length > MAX_VISIBLE_TIMES && (
+                          <span className="text-xs text-brand-textMuted">+{row.times.length - MAX_VISIBLE_TIMES} more</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )
               })}

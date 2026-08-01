@@ -50,18 +50,29 @@ export function clampToWindow(value: string, min: string, max: string): string {
   return value
 }
 
-export function generateStartMinutes(from: string, until: string, interval: string): number[] {
+/** Minutes in a duration label like "2 Hours"; null when the label isn't one. */
+export function durationMinutes(label: string): number | null {
+  const match = /^(\d+)\s*Hour/i.exec(label)
+  return match ? Number(match[1]) * 60 : null
+}
+
+/**
+ * Start times on the grid. With a duration, only starts whose session still *finishes*
+ * by closing time are offered — a 4-hour session must not start at 3pm when the day
+ * ends at 4pm, even though 3pm itself is inside the bookable window.
+ */
+export function generateStartMinutes(from: string, until: string, interval: string, duration = 0): number[] {
   const start = parseTimeToMinutes(from)
   const end = parseTimeToMinutes(until)
   if (start === null || end === null || end <= start) return []
   const step = intervalMinutes(interval)
   const times: number[] = []
-  for (let t = start; t < end; t += step) times.push(t)
+  for (let t = start; duration ? t + duration <= end : t < end; t += step) times.push(t)
   return times
 }
 
-export function generateStartTimes(from: string, until: string, interval: string): string[] {
-  return generateStartMinutes(from, until, interval).map(formatMinutes)
+export function generateStartTimes(from: string, until: string, interval: string, duration = 0): string[] {
+  return generateStartMinutes(from, until, interval, duration).map(formatMinutes)
 }
 
 export type DaySchedule = { from: string; until: string; interval: string }
