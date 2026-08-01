@@ -10,6 +10,7 @@ import {
   scheduleBounds,
   scheduleForDay,
   scheduleGroups,
+  scopeDays,
   snapToInterval,
 } from './slots'
 
@@ -171,6 +172,31 @@ test('day scopes only collide when they can share a calendar day', () => {
   expect(dayScopesOverlap('Every day', 'Weekends')).toBe(true)
   expect(dayScopesOverlap('Weekdays', 'Every day')).toBe(true)
   expect(dayScopesOverlap('', 'Weekdays')).toBe(false)
+  // Single days collide with themselves and with any scope that contains them.
+  expect(dayScopesOverlap('Saturday', 'Saturday')).toBe(true)
+  expect(dayScopesOverlap('Saturday', 'Every day')).toBe(true)
+  expect(dayScopesOverlap('Saturday', 'Monday')).toBe(false)
+})
+
+test('a scope names the calendar days it covers', () => {
+  expect(scopeDays('Saturday')).toEqual(['Saturday'])
+  expect(scopeDays('Every day')).toHaveLength(7)
+  expect(scopeDays('')).toEqual([])
+})
+
+test('schedule maths can be scoped to a subset of days', () => {
+  const split = {
+    ...WEEK,
+    perDayHours: true,
+    daySchedules: { Saturday: { from: '09:00', until: '15:00', interval: 'Every 30 Min' } },
+  }
+
+  // Asking about Saturday alone gives Saturday's own schedule, not the week's edges.
+  expect(scheduleBounds(split, ['Saturday'])).toEqual({ from: '09:00', until: '15:00' })
+  expect(finestInterval(split, ['Saturday'])).toBe('Every 30 Min')
+  expect(finestInterval(split, ['Monday'])).toBe('Every Hour')
+  // A day the schedule doesn't offer has no bounds at all.
+  expect(scheduleBounds(split, ['Sunday'])).toEqual({ from: '', until: '' })
 })
 
 test('merges touching windows and finds the next blocked start', () => {

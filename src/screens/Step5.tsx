@@ -14,11 +14,11 @@ import {
   parseTimeToMinutes,
   finestInterval,
   scheduleBounds,
+  scheduleGroups,
+  scopeDays,
   snapToInterval,
   type Window,
 } from '../lib/slots'
-
-const APPLIES_ON = ['Weekdays', 'Weekends', 'Every day']
 
 /** Keeps money fields to digits and a single decimal point. */
 function toAmount(raw: string): string {
@@ -33,28 +33,43 @@ export default function Step5() {
   // Figma shows the preview expanded, so it is visible unless explicitly hidden.
   const [hiddenPreviews, setHiddenPreviews] = useState<string[]>([])
 
-  // A rule must fit the whole week, so it is bounded by the outer edges of every day's
-  // hours rather than by the shared row — which is blank once hours are set per day.
-  const bounds = scheduleBounds(data)
-  // Rules span days, so their edges are offered on the finest grid any day runs on —
-  // an hourly weekday must not hide the 1.30pm edge a half-hourly Saturday really has.
-  const ruleInterval = finestInterval(data)
-  const scheduleReady = Boolean(ruleInterval && bounds.from && bounds.until)
+  // Mirrors the Schedule step's own choice: a rule either covers every available day, or
+  // names one of them. Days the schedule doesn't offer are not offered here either.
+  const appliesOptions = ['Every day', ...data.availableDays]
 
   /**
-   * The Schedule step owns the grid, so when it changes a rule set earlier can fall off
-   * it — 13:15 under a 30-minute interval, or 8am once the day starts at 9am. Pull every
-   * stored window back onto the grid rather than letting it price slots that don't exist.
+   * What the schedule gives the days a rule covers: their outer hours, the finest grid
+   * among them, and whether any of them is actually available. A Saturday rule is
+   * bounded by Saturday's own hours, not the week's.
+   */
+  function scheduleFor(scope: string) {
+    const days = scopeDays(scope)
+    const bounds = scheduleBounds(data, days)
+    const interval = finestInterval(data, days)
+    return {
+      bounds,
+      interval,
+      covered: scheduleGroups(data, days).length > 0,
+      ready: Boolean(interval && bounds.from && bounds.until),
+    }
+  }
+
+  /**
+   * The Schedule step owns each day's grid, so when it changes a rule set earlier can
+   * fall off it — 13:15 under a 30-minute interval, or 8am once the day starts at 9am.
+   * Pull every stored window back onto its own days' grid rather than letting it price
+   * slots that don't exist.
    */
   useEffect(() => {
-    if (!scheduleReady) return
-
-    const reconcile = (value: string) => {
-      if (!value) return value
-      return clampToWindow(snapToInterval(value, ruleInterval), bounds.from, bounds.until)
-    }
-
     for (const rule of data.priceRules) {
+      const { bounds, interval, ready } = scheduleFor(rule.appliesOn)
+      if (!ready) continue
+
+      const reconcile = (value: string) => {
+        if (!value) return value
+        return clampToWindow(snapToInterval(value, interval), bounds.from, bounds.until)
+      }
+
       const from = reconcile(rule.from)
       const to = reconcile(rule.to)
       if (from !== rule.from) updatePriceRule(rule.id, 'from', from)
@@ -65,7 +80,7 @@ export default function Step5() {
     }
     // Deliberately keyed to the schedule only: re-running on every rule edit would fight the user.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruleInterval, bounds.from, bounds.until, scheduleReady])
+  }, [data.slotInterval, data.bookableFrom, data.bookableUntil, data.perDayHours, data.daySchedules, data.availableDays])
 
   function handleRuleFromChange(id: string, value: string) {
     const rule = data.priceRules.find((r) => r.id === id)
@@ -154,6 +169,12 @@ export default function Step5() {
             const previewOpen = !hiddenPreviews.includes(rule.id)
             const priceId = `${rule.id}-price`
             const claimed = claimedHoursFor(rule)
+            const { bounds, interval, covered, ready } = scheduleFor(rule.appliesOn)
+            // A day can drop out of the schedule after the rule picked it; keep it
+            // visible in the dropdown rather than showing a silently blank field.
+            const options = appliesOptions.includes(rule.appliesOn)
+              ? appliesOptions
+              : [...appliesOptions, rule.appliesOn]
             return (
               <div key={rule.id} className="rounded-lg border border-brand-border px-4 py-3">
                 <div className="flex flex-col gap-4">
@@ -193,30 +214,31 @@ export default function Step5() {
                       label="Applies on"
                       value={rule.appliesOn}
                       onChange={(v) => handleAppliesOnChange(rule, v)}
-                      options={APPLIES_ON}
+                      options={options}
                     />
-                    {/* A rule can only cover slots that exist, so it rides the same grid and
-                        stays inside the bookable hours set on the Schedule step. `blocked`
-                        additionally hides hours another same-day rule already claims. */}
+                    {/* A rule can only cover slots that exist, so its times ride the
+                        schedule of the days it applies to — a Saturday rule offers
+                        Saturday's hours on Saturday's grid. `blocked` additionally hides
+                        hours another rule on the same days already claims. */}
                     <TimeSelect
                       label="Time book from"
                       value={rule.from}
                       onChange={(v) => handleRuleFromChange(rule.id, v)}
-                      interval={ruleInterval}
+                      interval={interval}
                       min={bounds.from}
                       max={bounds.until}
                       blocked={claimed}
-                      disabled={!scheduleReady}
+                      disabled={!ready}
                     />
                     <TimeSelect
                       label="To"
                       value={rule.to}
                       onChange={(v) => updatePriceRule(rule.id, 'to', v)}
-                      interval={ruleInterval}
+                      interval={interval}
                       after={rule.from}
                       max={bounds.until}
                       blocked={claimed}
-                      disabled={!scheduleReady}
+                      disabled={!ready}
                     />
                     <div className="flex flex-col gap-2">
                       <label htmlFor={priceId} className="text-base leading-[26px] text-black">
@@ -235,9 +257,11 @@ export default function Step5() {
                     </div>
                   </div>
 
-                  {!scheduleReady && (
+                  {!ready && (
                     <p className="text-xs text-brand-textMuted">
-                      Set the slot interval and bookable hours on the Schedule step to add a time-based rule.
+                      {covered
+                        ? 'Set the slot interval and bookable hours on the Schedule step to add a time-based rule.'
+                        : `${rule.appliesOn} isn't picked on the Schedule step, so this rule has no slots to price.`}
                     </p>
                   )}
 

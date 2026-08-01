@@ -95,9 +95,10 @@ export type ScheduleGroup = { days: string[]; from: string; until: string; inter
  * instead of a special case. With per-day off it yields exactly one group, which is why
  * those screens look unchanged until the operator asks for something different.
  */
-export function scheduleGroups(schedule: ScheduleShape): ScheduleGroup[] {
+export function scheduleGroups(schedule: ScheduleShape, days?: string[]): ScheduleGroup[] {
   const groups: ScheduleGroup[] = []
   for (const day of schedule.availableDays) {
+    if (days && !days.includes(day)) continue
     const { from, until, interval } = scheduleForDay(day, schedule)
     const existing = groups.find((g) => g.from === from && g.until === until && g.interval === interval)
     if (existing) existing.days.push(day)
@@ -107,13 +108,13 @@ export function scheduleGroups(schedule: ScheduleShape): ScheduleGroup[] {
 }
 
 /**
- * The finest grid any day runs on. A price rule spans days, so its boundaries are offered
- * on this grid — otherwise an hourly weekday would hide the 1.30pm edge a half-hourly
- * Saturday genuinely has. A rule is a plain time range, so it prices each day's slots
- * correctly whether or not its edges land on that day's own grid.
+ * The finest grid any of the given days runs on. A price rule can span days, so its
+ * boundaries are offered on this grid — otherwise an hourly weekday would hide the
+ * 1.30pm edge a half-hourly Saturday genuinely has. A rule is a plain time range, so it
+ * prices each day's slots correctly whether or not its edges land on that day's own grid.
  */
-export function finestInterval(schedule: ScheduleShape): string {
-  const intervals = scheduleGroups(schedule)
+export function finestInterval(schedule: ScheduleShape, days?: string[]): string {
+  const intervals = scheduleGroups(schedule, days)
     .map((g) => g.interval)
     .filter(Boolean)
   if (!intervals.length) return schedule.slotInterval
@@ -121,31 +122,43 @@ export function finestInterval(schedule: ScheduleShape): string {
 }
 
 /**
- * The outer edges of the whole week — a price rule has to sit inside these, since a
- * window outside every day's hours could never price a real slot.
+ * The outer edges across the given days (the whole week when none are named) — a price
+ * rule has to sit inside these, since a window outside every covered day's hours could
+ * never price a real slot. A Saturday rule is bounded by Saturday's own hours.
  */
-export function scheduleBounds(schedule: ScheduleShape): { from: string; until: string } {
-  const groups = scheduleGroups(schedule).filter((g) => g.from && g.until)
-  if (!groups.length) return { from: schedule.bookableFrom, until: schedule.bookableUntil }
+export function scheduleBounds(schedule: ScheduleShape, days?: string[]): { from: string; until: string } {
+  const groups = scheduleGroups(schedule, days).filter((g) => g.from && g.until)
+  const fallback = days ? { from: '', until: '' } : { from: schedule.bookableFrom, until: schedule.bookableUntil }
+  if (!groups.length) return fallback
 
   const starts = groups.map((g) => parseTimeToMinutes(g.from)).filter((m): m is number => m !== null)
   const ends = groups.map((g) => parseTimeToMinutes(g.until)).filter((m): m is number => m !== null)
-  if (!starts.length || !ends.length) return { from: schedule.bookableFrom, until: schedule.bookableUntil }
+  if (!starts.length || !ends.length) return fallback
 
   return { from: minutesToTimeValue(Math.min(...starts)), until: minutesToTimeValue(Math.max(...ends)) }
 }
 
 export type Window = { start: number; end: number }
 
+const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const WEEKEND_NAMES = ['Saturday', 'Sunday']
+
+/** The calendar days an "applies on" scope covers — a single day covers just itself. */
+export function scopeDays(scope: string): string[] {
+  if (scope === 'Every day') return [...WEEKDAY_NAMES, ...WEEKEND_NAMES]
+  if (scope === 'Weekdays') return WEEKDAY_NAMES
+  if (scope === 'Weekends') return WEEKEND_NAMES
+  return scope ? [scope] : []
+}
+
 /**
  * Whether two "applies on" scopes can land on the same calendar day. Two Weekdays rules
- * can coexist at different hours, but they must not claim the same hour; Weekdays and
- * Weekends never collide; "Every day" collides with everything.
+ * can coexist at different hours, but they must not claim the same hour; a Saturday rule
+ * collides with a Weekends one but never with a Weekdays one.
  */
 export function dayScopesOverlap(a: string, b: string): boolean {
-  if (!a || !b) return false
-  if (a === b) return true
-  return a === 'Every day' || b === 'Every day'
+  const bDays = scopeDays(b)
+  return scopeDays(a).some((day) => bDays.includes(day))
 }
 
 /** Merges overlapping/touching windows so gap maths doesn't have to handle duplicates. */

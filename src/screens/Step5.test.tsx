@@ -145,8 +145,8 @@ test('a rule can end exactly where the next one starts', async () => {
   renderStep5({
     ...SCHEDULE,
     priceRules: [
-      { id: 'r1', appliesOn: 'Weekends', from: '13:00', to: '15:00', price: '30' },
-      { id: 'r2', appliesOn: 'Weekends', from: '12:00', to: '', price: '' },
+      { id: 'r1', appliesOn: 'Monday', from: '13:00', to: '15:00', price: '30' },
+      { id: 'r2', appliesOn: 'Monday', from: '12:00', to: '', price: '' },
     ],
   })
 
@@ -162,12 +162,12 @@ test('a rule can end exactly where the next one starts', async () => {
   expect(options).toEqual(['1.00pm'])
 })
 
-test('a weekend rule is free to use hours a weekday rule owns', async () => {
+test('a rule on one day is free to use hours a rule on another day owns', async () => {
   renderStep5({
     ...SCHEDULE,
     priceRules: [
-      { id: 'r1', appliesOn: 'Weekdays', from: '13:00', to: '15:00', price: '30' },
-      { id: 'r2', appliesOn: 'Weekends', from: '', to: '', price: '' },
+      { id: 'r1', appliesOn: 'Monday', from: '13:00', to: '15:00', price: '30' },
+      { id: 'r2', appliesOn: 'Tuesday', from: '', to: '', price: '' },
     ],
   })
 
@@ -180,4 +180,48 @@ test('a weekend rule is free to use hours a weekday rule owns', async () => {
   // Different days never collide, so nothing is withheld.
   expect(options).toContain('1.00pm')
   expect(options).toContain('2.00pm')
+})
+
+test('the day choices mirror the Schedule step, and a rule follows its own day', async () => {
+  renderStep5({
+    ...SCHEDULE,
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    perDayHours: true,
+    daySchedules: { Saturday: { from: '09:00', until: '12:00', interval: 'Every 30 Min' } },
+    priceRules: [{ id: 'r1', appliesOn: 'Saturday', from: '', to: '', price: '' }],
+  })
+
+  await waitFor(() => screen.getByText('Rules 1'))
+
+  // The dropdown offers exactly what the schedule offers: every day, or one of its days.
+  const scopeOptions = within(screen.getByLabelText('Applies on'))
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+  expect(scopeOptions).toEqual([
+    'Every day', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+  ])
+  expect(scopeOptions).not.toContain('Sunday')
+
+  // A Saturday rule lives inside Saturday's own schedule: its 9-12 hours, its 30-minute
+  // grid — not the weekday 9-17 row.
+  const from = within(screen.getByLabelText('Time book from'))
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+    .filter((t) => t !== '--.--')
+  expect(from).toContain('9.30am')
+  expect(from).not.toContain('1.00pm')
+  expect(from[0]).toBe('9.00am')
+  expect(from[from.length - 1]).toBe('12.00pm')
+})
+
+test('a rule for a day the schedule dropped explains itself instead of pricing nothing', async () => {
+  renderStep5({
+    ...SCHEDULE,
+    priceRules: [{ id: 'r1', appliesOn: 'Sunday', from: '', to: '', price: '' }],
+  })
+
+  await waitFor(() => screen.getByText('Rules 1'))
+
+  expect(screen.getByLabelText('Time book from')).toBeDisabled()
+  expect(screen.getByText(/Sunday isn't picked on the Schedule step/)).toBeInTheDocument()
 })

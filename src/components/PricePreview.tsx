@@ -1,14 +1,6 @@
 import { motion } from 'framer-motion'
-import { buildDayPreview, scheduleGroups } from '../lib/slots'
+import { buildDayPreview, scheduleGroups, scopeDays } from '../lib/slots'
 import type { BookingData } from '../context/BookingContext'
-
-/** Days a rule's "applies on" scope can actually land on. */
-const WEEKENDS = ['Saturday', 'Sunday']
-function daysInScope(appliesOn: string, days: string[]): string[] {
-  if (appliesOn === 'Weekends') return days.filter((d) => WEEKENDS.includes(d))
-  if (appliesOn === 'Weekdays') return days.filter((d) => !WEEKENDS.includes(d))
-  return days
-}
 
 /**
  * Shows the operator the customer-facing result of the price rules: every start time for
@@ -24,8 +16,9 @@ export function PricePreview({ data, ruleId }: { data: BookingData; ruleId: stri
   // One block per distinct set of hours the rule's days run on. Days that share hours —
   // which is all of them until the operator says otherwise — collapse into one block, so
   // this reads exactly as it did before per-day hours existed.
+  const ruleDays = scopeDays(rule?.appliesOn ?? '')
   const blocks = scheduleGroups(data)
-    .map((group) => ({ ...group, days: daysInScope(rule?.appliesOn ?? '', group.days) }))
+    .map((group) => ({ ...group, days: group.days.filter((d) => ruleDays.includes(d)) }))
     .filter((group) => group.days.length)
     .map((group) => ({
       days: group.days,

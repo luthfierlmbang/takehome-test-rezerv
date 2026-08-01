@@ -35,7 +35,7 @@ export type BookingData = {
 let ruleSequence = 0
 export function createPriceRule(): PriceRule {
   ruleSequence += 1
-  return { id: `rule-${ruleSequence}`, appliesOn: 'Weekdays', from: '', to: '', price: '' }
+  return { id: `rule-${ruleSequence}`, appliesOn: 'Every day', from: '', to: '', price: '' }
 }
 
 const INITIAL_DATA: BookingData = {
@@ -57,7 +57,7 @@ const INITIAL_DATA: BookingData = {
   slotInterval: '',
   // Pricing arrives pre-filled, matching the values the Figma Pricing screen shows.
   basePrice: '20',
-  priceRules: [{ id: 'rule-0', appliesOn: 'Weekdays', from: '13:00', to: '14:00', price: '14.00' }],
+  priceRules: [{ id: 'rule-0', appliesOn: 'Every day', from: '13:00', to: '14:00', price: '14.00' }],
   paymentDropIn: false,
   paymentClassPack: false,
 }
